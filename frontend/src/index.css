@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============ DESIGN TOKENS (global — one source of truth) ============ */
+:root, html.dark{
+  --gold:#E8A93B; --gold-deep:#C98A2B; --maroon:#E5533D; --green:#4FA37A;
+  --bg:#14101B; --bg-soft:#1B1622; --surface:#241D2E; --surface-2:#2C2438;
+  --ink:#F3E9DA; --ink-dim:#B9AEC2; --line:rgba(232,169,59,0.18);
+  --shadow-deep: 0 30px 60px -20px rgba(0,0,0,0.65);
+  --shadow-soft: 0 12px 30px -12px rgba(0,0,0,0.5);
+}
+html.light{
+  --bg:#F3ECDD; --bg-soft:#EFE6D2; --surface:#FFFBF3; --surface-2:#FFFFFF;
+  --ink:#2B1E14; --ink-dim:#6E5B48; --line:rgba(107,30,35,0.14);
+  --gold:#B8791F; --gold-deep:#96611A; --maroon:#B23A2A; --green:#2F7A55;
+  --shadow-deep: 0 30px 60px -24px rgba(60,40,20,0.28);
+  --shadow-soft: 0 12px 26px -14px rgba(60,40,20,0.22);
+}
+
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'Manrope', sans-serif;
+  -webkit-font-smoothing:antialiased;
+  transition:background .25s ease, color .2s ease;
+}
+h1,h2,.font-display{ font-family:'Yatra One', cursive; letter-spacing:-0.02em; line-height:1.1; }
+.font-body{ font-family:'Manrope', sans-serif; }
+.font-mono{ font-family:'IBM Plex Mono', monospace; }
+.font-hand{ font-family:'Kalam', cursive; }
+::-webkit-scrollbar{ width:8px; height:8px; }
+::-webkit-scrollbar-track{ background:var(--bg-soft); }
+::-webkit-scrollbar-thumb{ background:color-mix(in srgb, var(--ink-dim) 45%, transparent); border-radius:8px; border:1px solid var(--line); }
+::-webkit-scrollbar-thumb:hover{ background:color-mix(in srgb, var(--gold) 55%, transparent); }
+::selection{ background:var(--gold); color:var(--bg); }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
+
+.grain{
+  position:fixed; inset:0; pointer-events:none; z-index:1; opacity:.035; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+html.light .grain{ opacity:.02; }
+
+/* utility classes bridging CSS-var tokens to plain class names used across components */
+.bg-app{ background:var(--bg); }
+.bg-surface{ background:var(--surface); }
+.bg-surface-2{ background:var(--surface-2); }
+.text-ink{ color:var(--ink); }
+.text-ink-dim{ color:var(--ink-dim); }
+.text-gold{ color:var(--gold); }
+.text-maroon{ color:var(--maroon); }
+.text-green{ color:var(--green); }
+.border-line{ border-color:var(--line); }
+.shadow-deep{ box-shadow:var(--shadow-deep); }
+.shadow-soft{ box-shadow:var(--shadow-soft); }
+
+/* ============ GLOBAL 3D + CINEMATIC ANIMATIONS ============ */
+@keyframes shimmer{ 0%{ background-position:-200% 0 } 100%{ background-position:200% 0 } }
+@keyframes cinematicIn{ 0%{ opacity:0; transform:translateY(18px) scale(0.98); filter:blur(6px) } 100%{ opacity:1; transform:translateY(0) scale(1); filter:blur(0) } }
+@keyframes pageOut{ 0%{ opacity:1; transform:translateY(0) } 100%{ opacity:0; transform:translateY(-8px) } }
+.page-enter{ animation:cinematicIn 0.55s cubic-bezier(0.16,1,0.3,1) both; }
+.ai-shimmer{ background:linear-gradient(90deg, transparent, rgba(232,169,59,0.18), transparent); background-size:200% 100%; animation:shimmer 1.4s infinite; }
