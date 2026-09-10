@@ -6,10 +6,11 @@ import { useLang } from '../../context/LangContext'
 import { fmt, initials } from '../../lib/format'
 import Button from '../../components/Button'
 import { api } from '../../lib/api'
+import * as offline from '../../lib/offline'
 
 export default function CustomerDetail() {
   const { id } = useParams()
-  const { updateCustomer, deleteCustomer, refreshAll } = useShopData()
+  const { customers, updateCustomer, deleteCustomer, refreshAll } = useShopData()
   const { showToast } = useToast()
   const { t } = useLang()
   const navigate = useNavigate()
@@ -32,11 +33,34 @@ export default function CustomerDetail() {
       // shop upi
       try { const me = await api.me(); if (me.shop?.upi_id) setShopUpi(me.shop.upi_id) } catch {}
     } catch {
-      setC(null)
+      // Offline fallback: load from IndexedDB and local state
+      try {
+        const dbCusts = await offline.getCustomers()
+        const found = dbCusts.find(x => String(x.id) === String(id)) || customers.find(x => String(x.id) === String(id))
+        if (found) {
+          const dbEntries = await offline.getEntries()
+          const custEntries = dbEntries.filter(e => String(e.customer_id) === String(id) || e.customer_name?.toLowerCase() === found.name?.toLowerCase())
+          const data = {
+            ...found,
+            entries: found.entries || custEntries || []
+          }
+          setC(data)
+          setName(data.name || '')
+          setPhone(data.phone || '')
+          setUpi(data.upi_id || '')
+
+          const shopProf = await offline.getShopProfileOffline()
+          if (shopProf?.upi_id) setShopUpi(shopProf.upi_id)
+        } else {
+          setC(null)
+        }
+      } catch {
+        setC(null)
+      }
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }, [id, customers])
 
   useEffect(() => { load() }, [load])
 

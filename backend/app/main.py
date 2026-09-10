@@ -16,7 +16,7 @@ from . import models
 
 from .config import settings
 
-from .routers import auth, customers, entries, billing, admin, shop, settings as settings_router, voice, cash, insights, export as export_router
+from .routers import auth, customers, entries, billing, admin, shop, settings as settings_router, voice, cash, insights, export as export_router, password_reset
 
 def _migrate_sqlite():
     try:
@@ -194,6 +194,8 @@ app.include_router(cash.router)
 app.include_router(insights.router)
 
 app.include_router(export_router.router)
+
+app.include_router(password_reset.router)
 
 app.include_router(billing.public)
 

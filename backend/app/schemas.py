@@ -22,6 +22,24 @@ class AdminLoginIn(BaseModel):
     password: str
 
 
+class PasswordResetRequestIn(BaseModel):
+    account_type: Literal["user", "admin"] = "user"
+    identifier: str  # email for admin, phone or email for user
+
+
+class PasswordResetVerifyIn(BaseModel):
+    account_type: Literal["user", "admin"] = "user"
+    identifier: str
+    otp: str
+    new_password: str
+
+
+class PasswordResetOfflineSyncIn(BaseModel):
+    shop_id: int
+    signed_payload: str
+    new_password_hash: str
+
+
 class TokenOut(BaseModel):
     token: str
     role: Literal["user", "admin"]

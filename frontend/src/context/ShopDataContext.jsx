@@ -47,7 +47,7 @@ export function ShopDataProvider({ children }) {
       // try sync queue after refresh
       trySyncAll().then(r=> setPendingSync(r.pending))
     } catch(e){
-      if (e.message === 'OFFLINE') {
+      if (e.message === 'OFFLINE' || !navigator.onLine || e.message?.includes('Failed to fetch') || e.message?.includes('Network')) {
         // load from offline DB
         const [c, en, p] = await Promise.all([offline.getCustomers(), offline.getEntries(), offline.getMeta('plan')])
         if (c && c.length) setCustomers(c)

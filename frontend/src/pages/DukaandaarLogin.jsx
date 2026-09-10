@@ -126,6 +126,18 @@ export default function DukaandaarLogin() {
             <Button onClick={verifyOtp} disabled={busy} className="w-full">{busy ? t('dl_verify_busy') : t('dl_verify')}</Button>
           </div>
         )}
+
+        {!registerMode && step === 'phone' && (
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={sendOtp}
+              className="text-xs text-ink-dim hover:text-gold transition-colors font-medium"
+            >
+              Need help / Reset OTP? Tap Send OTP
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

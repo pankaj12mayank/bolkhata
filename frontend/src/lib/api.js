@@ -52,6 +52,12 @@ export const api = {
   sendOtp: (phone) => apiFetch('/auth/otp/send', { method: 'POST', body: { phone }, auth: false }),
   verifyOtp: (payload) => apiFetch('/auth/otp/verify', { method: 'POST', body: payload, auth: false }),
   adminLogin: (email, password) => apiFetch('/auth/admin/login', { method: 'POST', body: { email, password }, auth: false }),
+  requestPasswordReset: (account_type, identifier) =>
+    apiFetch('/auth/password-reset/request', { method: 'POST', body: { account_type, identifier }, auth: false }),
+  verifyPasswordReset: (account_type, identifier, otp, new_password) =>
+    apiFetch('/auth/password-reset/verify', { method: 'POST', body: { account_type, identifier, otp, new_password }, auth: false }),
+  syncOfflinePasswordReset: (payload) =>
+    apiFetch('/auth/password-reset/offline-sync', { method: 'POST', body: payload, auth: false }),
   me: () => apiFetch('/auth/me'),
   updateShop: (payload) => apiFetch('/shop', { method: 'PUT', body: payload }),
 
