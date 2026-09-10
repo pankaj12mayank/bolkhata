@@ -1,5 +1,4 @@
 ﻿from datetime import datetime, timezone
-from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -30,6 +29,7 @@ def create_customer(payload: schemas.CustomerCreateIn, shop: models.Shop = Depen
         name=payload.name.strip(),
         phone=payload.phone or "",
         balance=payload.balance or 0,
+        upi_id=payload.upi_id or "",
     )
     db.add(customer)
     db.flush()
@@ -68,6 +68,8 @@ def update_customer(customer_id: int, payload: schemas.CustomerUpdateIn, shop: m
         customer.name = payload.name.strip()
     if payload.phone is not None:
         customer.phone = payload.phone
+    if payload.upi_id is not None:
+        customer.upi_id = payload.upi_id or ""
     db.commit()
     db.refresh(customer)
     return customer
@@ -90,11 +92,9 @@ def remind_customer(customer_id: int, shop: models.Shop = Depends(get_current_sh
         raise HTTPException(status_code=404, detail="Grahak nahi mila")
     if customer.balance <= 0:
         raise HTTPException(status_code=400, detail="Is grahak ka koi udhaar baaki nahi — reminder ki zaroorat nahi")
-    # Throttle: one reminder per customer per 24h? simple check last reminder
-    from datetime import timezone, timedelta, datetime
+    # Throttle: one reminder per customer per hour
     last = db.query(models.Reminder).filter(models.Reminder.customer_id == customer.id).order_by(models.Reminder.sent_at.desc()).first()
     if last and last.sent_at:
-        # Ensure timezone aware comparison
         now = datetime.now(timezone.utc)
         last_time = last.sent_at
         if last_time.tzinfo is None:
@@ -104,44 +104,6 @@ def remind_customer(customer_id: int, shop: models.Shop = Depends(get_current_sh
     db.add(models.Reminder(customer_id=customer.id, method="whatsapp"))
     db.commit()
     ps = get_settings(db)
-    template = ps.wa_template or "Namaste {name} ji, aapka \u20b9{balance} udhaar baaki hai. Kripya jald bhugtan karein. Dhanyavaad \u2014 BolKhata"
-    try:
-        message = template.format(name=customer.name.split(' ')[0], balance=f"{customer.balance:.0f}", full_name=customer.name)
-    except:
-        message = template.replace("{name}", customer.name.split(' ')[0]).replace("{balance}", f"{customer.balance:.0f}")
-    message = message.replace("{shop}", shop.shop_name)
-    # Try auto-send if provider is not wa_me
-    wa_link = f"https://wa.me/?text={quote(message)}"
-    auto_sent = False
-    auto_detail = ""
-    try:
-        from ..services.whatsapp_service import send_whatsapp_via_provider
-        provider = getattr(ps, 'whatsapp_provider', 'wa_me') or 'wa_me'
-        base_url = getattr(ps, 'whatsapp_base_url', '') or ''
-        api_key = getattr(ps, 'whatsapp_api_key', '') or ''
-        phone_id = getattr(ps, 'whatsapp_phone_id', '') or ''
-        if provider not in ("wa_me", "disabled") and base_url and api_key:
-            # Attempt auto-send
-            ok, detail = send_whatsapp_via_provider(customer.phone or "", message, provider, base_url, api_key, phone_id)
-            if ok and "https://wa.me" not in detail:
-                auto_sent = True
-                auto_detail = detail
-                # Still provide wa.me as fallback link
-                wa_link = get_whatsapp_link(customer.phone or "", message) if 'get_whatsapp_link' in dir() else wa_link
-            elif ok:
-                wa_link = detail
-        else:
-            # free wa.me link
-            if customer.phone and customer.phone.strip():
-                digits = "".join(c for c in customer.phone if c.isdigit())
-                if len(digits) == 10:
-                    digits = "91" + digits
-                if len(digits) >= 12:
-                    wa_link = f"https://wa.me/{digits}?text={quote(message)}"
-    except Exception as e:
-        auto_detail = str(e)[:200]
-    # Fallback wa.me link if not auto_sent
-    if not auto_sent:
-        from ..services.whatsapp_service import get_whatsapp_link
-        wa_link = get_whatsapp_link(customer.phone or "", message)
-    return {"message": message, "wa_link": wa_link, "auto_sent": auto_sent, "detail": auto_detail, "provider": getattr(ps, 'whatsapp_provider', 'wa_me')}
+    from ..services.remind_service import dispatch
+    # UPI pay link: Free = off, Standard/Paid = on
+    return dispatch(customer, shop, ps, include_upi=shop.plan_tier in ("Standard", "Paid"))

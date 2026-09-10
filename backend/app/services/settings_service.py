@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from .. import models
 
 DEFAULTS = {
-    "free_entries_limit": 15,
+    "free_entries_limit": 100,
     "paid_price_inr": 99,
     "paid_entries_limit": -1,
     "currency": "INR",
@@ -19,8 +19,12 @@ DEFAULTS = {
     "whisper_model": "whisper-1",
     "claude_model": "claude-3-haiku-20240307",
     "auto_reminder": "true",
+    "auto_reminder_day": "mon",
+    "auto_reminder_time": "09:00",
     "wa_template": "Namaste {name} ji, aapka \u20b9{balance} udhaar baaki hai. Kripya jald bhugtan karein. Dhanyavaad \u2014 BolKhata",
     "maintenance_mode": "false",
+    "standard_price_inr": 49,
+    "standard_entries_limit": 500,
     # generic providers
     "ai_provider": "local",
     "ai_base_url": "",

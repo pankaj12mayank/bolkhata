@@ -33,11 +33,15 @@ def create_entry(payload: schemas.EntryCreateIn, shop: models.Shop = Depends(get
     ps = get_settings(db)
     _check_and_reset(shop, db, ps)
 
-    # Effective limit
+    # Effective limit - Free / Standard / Paid
     if shop.plan_tier == "Free":
         limit = ps.free_entries_limit
         if shop.entries_used_this_month >= limit:
             raise HTTPException(status_code=402, detail="Free plan ki entries poori ho gayi — upgrade karein")
+    elif shop.plan_tier == "Standard":
+        std_limit = getattr(ps, 'standard_entries_limit', 500) or 500
+        if shop.entries_used_this_month >= std_limit:
+            raise HTTPException(status_code=402, detail="Standard plan limit khatam — Paid me upgrade karein")
     else:
         if ps.paid_entries_limit != -1 and shop.entries_used_this_month >= ps.paid_entries_limit:
             raise HTTPException(status_code=402, detail="Paid plan limit reached — admin se contact karein")
@@ -55,22 +59,54 @@ def create_entry(payload: schemas.EntryCreateIn, shop: models.Shop = Depends(get
     # If parse_status failed, don't mutate balance (audit only)
     is_failed = payload.parse_status == "failed"
 
-    customer = (
-        db.query(models.Customer)
-        .filter(models.Customer.shop_id == shop.id, func.lower(models.Customer.name) == name_clean.lower())
-        .first()
-    )
+    # --- Customer resolve: handles multiple Ramesh + phone_hint + customer_id ---
+    customer = None
     is_new = False
+    # If caller already disambiguated via customer_id, use it directly
+    if getattr(payload, 'customer_id', None):
+        customer = db.query(models.Customer).filter(models.Customer.shop_id==shop.id, models.Customer.id==payload.customer_id).first()
+        if not customer:
+            raise HTTPException(status_code=404, detail="Selected grahak nahi mila - dobara choose karein")
+    else:
+        # Try exact match first (case-insensitive)
+        exact = db.query(models.Customer).filter(models.Customer.shop_id == shop.id, func.lower(models.Customer.name) == name_clean.lower()).first()
+        if exact:
+            customer = exact
+        else:
+            # No exact - search partial candidates for disambiguation
+            # e.g. "Ramesh" -> matches "Ramesh Kumar", "Ramesh Tailor"
+            like_pattern = f"%{name_clean.lower()}%"
+            candidates = db.query(models.Customer).filter(
+                models.Customer.shop_id == shop.id,
+                func.lower(models.Customer.name).like(like_pattern)
+            ).all()
+            # Phone hint filtering if provided (e.g. "98" -> phone contains 98)
+            phone_hint = getattr(payload, 'phone_hint', None)
+            if phone_hint and candidates:
+                filtered = [c for c in candidates if phone_hint in (c.phone or "")]
+                if filtered:
+                    candidates = filtered
+            if len(candidates) > 1:
+                # Ambiguous - return 409 with candidate list, do NOT create
+                cand_out = [{"id": c.id, "name": c.name, "phone": c.phone or "", "balance": c.balance} for c in candidates[:5]]
+                raise HTTPException(status_code=409, detail={"message": f"'{name_clean}' naam se {len(candidates)} grahak mile - kaunsa wala?", "candidates": cand_out})
+            elif len(candidates) == 1:
+                customer = candidates[0]
+            else:
+                # No candidate - will create new below
+                pass
     if not customer:
         is_new = True
-        # Don't use placeholder duplicate phone — use empty
         customer = models.Customer(shop_id=shop.id, name=name_clean, phone="", balance=0)
         db.add(customer)
         db.flush()
 
     if not is_failed:
         delta = payload.amount if payload.type == "credit_given" else -payload.amount
-        customer.balance += delta
+        # Overpay guard: warn but allow negative? Keep balance can go negative but clamp huge
+        new_balance = customer.balance + delta
+        # Optional warning if overpay > 5000 negative? we just allow but log
+        customer.balance = new_balance
 
     entry = models.Entry(
         shop_id=shop.id, customer_id=customer.id, amount=payload.amount, type=payload.type,

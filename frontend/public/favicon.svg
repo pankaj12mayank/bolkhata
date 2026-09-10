@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-<rect x="2" y="2" width="60" height="60" rx="16" fill="#1A1625" stroke="#E8A93B" stroke-width="1.2"/>
-<circle cx="32" cy="32" r="18" fill="#241D2E" stroke="#E8A93B" stroke-opacity="0.12"/>
-<path d="M32 17.5a6 6 0 0 1 6 6v7a6 6 0 0 1-12 0v-7a6 6 0 0 1 6-6z" fill="#E8A93B"/>
-<path d="M32 18.5a5 5 0 0 1 5 5v6a5 5 0 0 1-10 0v-6a5 5 0 0 1 5-5z" fill="#F0C369"/>
-<path d="M23.5 31.5v1.2a8.5 8.5 0 0 0 17 0v-1.2" stroke="#E5533D" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M32 40v5.5" stroke="#E5533D" stroke-width="2.3" stroke-linecap="round"/>
-<path d="M28.5 45.5h7" stroke="#E5533D" stroke-width="1.8" stroke-linecap="round"/>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#0F172A"/>
+  <rect x="2" y="2" width="60" height="60" rx="16" stroke="#F59E0B" stroke-opacity="0.12" stroke-width="1.2"/>
+  <path d="M32 17.5a6 6 0 0 1 6 6v7a6 6 0 0 1-12 0v-7a6 6 0 0 1 6-6z" fill="white"/>
+  <path d="M32 18.2a5 5 0 0 1 5 5v6a5 5 0 0 1-10 0v-6a5 5 0 0 1 5-5z" fill="white" opacity="0.0"/>
+  <path d="M23.5 31.5v1.1a8.5 8.5 0 0 0 17 0v-1.1" stroke="#F59E0B" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M32 40v5.5" stroke="#F59E0B" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M28.5 45.5h7" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round"/>
 </svg>

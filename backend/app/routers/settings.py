@@ -29,6 +29,8 @@ def _to_out(s: models.PlatformSettings) -> dict:
         "whisper_model": s.whisper_model,
         "claude_model": s.claude_model,
         "auto_reminder": s.auto_reminder,
+        "auto_reminder_day": getattr(s, "auto_reminder_day", "mon") or "mon",
+        "auto_reminder_time": getattr(s, "auto_reminder_time", "09:00") or "09:00",
         "wa_template": s.wa_template,
         "maintenance_mode": s.maintenance_mode,
         # generic

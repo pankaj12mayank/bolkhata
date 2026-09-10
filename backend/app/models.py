@@ -18,10 +18,13 @@ class Shop(Base):
     language = Column(String, default="Hindi")
     plan_tier = Column(String, default="Free")  # 'Free' | 'Paid'
     entries_used_this_month = Column(Integer, default=0)
-    entries_limit = Column(Integer, default=15)
+    entries_limit = Column(Integer, default=100)
     period_start = Column(Date, default=lambda: date.today())  # month period start for auto-reset
     is_active = Column(String, default="true")  # 'true' | 'false' string to avoid SQLite bool issues, admin can toggle
     created_at = Column(DateTime(timezone=True), default=_utcnow)
+    # New fields Phase 3
+    upi_id = Column(String, default="")
+    shop_photo = Column(String, default="")
 
     customers = relationship("Customer", back_populates="shop", cascade="all, delete-orphan")
     entries = relationship("Entry", back_populates="shop", cascade="all, delete-orphan")
@@ -40,6 +43,7 @@ class Customer(Base):
     name = Column(String, nullable=False)
     phone = Column(String, default="")
     balance = Column(Float, default=0)
+    upi_id = Column(String, default="")
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 
     shop = relationship("Shop", back_populates="customers")
@@ -101,9 +105,11 @@ class PlatformSettings(Base):
     __tablename__ = "platform_settings"
     id = Column(Integer, primary_key=True, index=True)
     # Only one row expected, id=1
-    free_entries_limit = Column(Integer, default=15, nullable=False)
+    free_entries_limit = Column(Integer, default=100, nullable=False)
     paid_price_inr = Column(Integer, default=99, nullable=False)
     paid_entries_limit = Column(Integer, default=-1)  # -1 = unlimited
+    standard_price_inr = Column(Integer, default=49)  # Phase 3: Rs 49 for 500 entries
+    standard_entries_limit = Column(Integer, default=500)
     currency = Column(String, default="INR")
     default_language = Column(String, default="Hindi")
     otp_mode = Column(String, default="dev")  # dev | sms
@@ -117,6 +123,10 @@ class PlatformSettings(Base):
     whisper_model = Column(String, default="whisper-1")
     claude_model = Column(String, default="claude-3-haiku-20240307")
     auto_reminder = Column(String, default="true")
+    auto_reminder_day = Column(String, default="mon")  # mon..sun for scheduled auto reminders
+    auto_reminder_time = Column(String, default="09:00")  # HH:MM local
+    last_reminder_run_date = Column(Date, nullable=True)
+    plans_json = Column(Text, default="")  # fully dynamic plan definitions (admin-editable)
     wa_template = Column(Text, default="Namaste {name} ji, aapka ₹{balance} udhaar baaki hai. Kripya jald bhugtan karein. Dhanyavaad — BolKhata")
     maintenance_mode = Column(String, default="false")
     razorpay_webhook_secret = Column(String, default="")
@@ -140,4 +150,44 @@ class PlatformSettings(Base):
     otp_base_url = Column(String, default="")
     otp_api_key = Column(String, default="")
     otp_template_id = Column(String, default="")
+    # Admin profile overrides (fallback to env ADMIN_EMAIL/ADMIN_PASSWORD)
+    admin_name = Column(String, default="")
+    admin_email = Column(String, default="")
+    admin_password_hash = Column(String, default="")
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class OtpStore(Base):
+    __tablename__ = "otp_store"
+    phone = Column(String, primary_key=True)
+    otp = Column(String, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    attempts = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
+class CashDay(Base):
+    __tablename__ = "cash_days"
+    id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+    # denominations JSON as Text: {"2000":2, "500":4, ...}
+    denominations = Column(Text, default="{}")
+    total_cash = Column(Float, default=0)
+    udhaar_given = Column(Float, default=0)
+    payment_received = Column(Float, default=0)
+    expected_cash = Column(Float, default=0)
+    diff = Column(Float, default=0)
+    note = Column(Text, default="")
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+    __table_args__ = (UniqueConstraint("shop_id", "date", name="uq_shop_date"),)
+
+
+class InsightCache(Base):
+    __tablename__ = "insight_cache"
+    id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)
+    week_start = Column(Date, nullable=False)
+    summary = Column(Text, default="")
+    created_at = Column(DateTime(timezone=True), default=_utcnow)

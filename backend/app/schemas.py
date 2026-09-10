@@ -37,6 +37,8 @@ class ShopOut(BaseModel):
     plan_tier: str
     entries_used_this_month: int
     entries_limit: int
+    upi_id: Optional[str] = ""
+    shop_photo: Optional[str] = ""
 
     class Config:
         from_attributes = True
@@ -46,6 +48,8 @@ class ShopUpdateIn(BaseModel):
     shop_name: Optional[str] = None
     owner_name: Optional[str] = None
     language: Optional[str] = None
+    upi_id: Optional[str] = None
+    shop_photo: Optional[str] = None
 
 
 # ---------- CUSTOMER ----------
@@ -66,6 +70,7 @@ class CustomerOut(BaseModel):
     name: str
     phone: str
     balance: float
+    upi_id: Optional[str] = ""
 
     class Config:
         from_attributes = True
@@ -79,11 +84,13 @@ class CustomerCreateIn(BaseModel):
     name: str
     phone: Optional[str] = ""
     balance: Optional[float] = 0
+    upi_id: Optional[str] = ""
 
 
 class CustomerUpdateIn(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
+    upi_id: Optional[str] = None
 
 
 # ---------- ENTRY ----------
@@ -94,6 +101,8 @@ class EntryCreateIn(BaseModel):
     raw_voice_text: str = ""
     source: Literal["voice", "manual"] = "voice"
     parse_status: Literal["success", "failed"] = "success"
+    customer_id: Optional[int] = None  # if disambiguated picker sends exact id
+    phone_hint: Optional[str] = None  # e.g. "98" for Ramesh 98 wale
 
 
 class VoiceTranscribeOut(BaseModel):
@@ -112,6 +121,8 @@ class VoiceParseOut(BaseModel):
     type: Literal["credit_given", "payment_received"]
     confidence: float = 1.0
     raw_text: str
+    phone_hint: Optional[str] = None
+    candidates: Optional[list] = None  # if ambiguous, list of {id,name,phone,balance}
 
 
 class EntryResultOut(BaseModel):
@@ -133,6 +144,8 @@ class BillingOut(BaseModel):
     used: int
     limit: int
     price: int = 99
+    standard_price: int = 49
+    standard_limit: int = 500
 
 
 class BillingOrderOut(BaseModel):
@@ -170,6 +183,7 @@ class AdminShopOut(BaseModel):
 class SubscriptionOut(BaseModel):
     id: int
     shop_id: int
+    shop_name: Optional[str] = None
     amount: float
     razorpay_id: str
     status: str
@@ -192,6 +206,8 @@ class PlatformSettingsOut(BaseModel):
     free_entries_limit: int
     paid_price_inr: int
     paid_entries_limit: int
+    standard_price_inr: Optional[int] = 49
+    standard_entries_limit: Optional[int] = 500
     currency: str
     default_language: str
     otp_mode: str
@@ -206,6 +222,8 @@ class PlatformSettingsOut(BaseModel):
     whisper_model: str
     claude_model: str
     auto_reminder: str
+    auto_reminder_day: str = "mon"
+    auto_reminder_time: str = "09:00"
     wa_template: str
     maintenance_mode: str
     # generic providers
@@ -235,6 +253,8 @@ class PlatformSettingsUpdateIn(BaseModel):
     free_entries_limit: Optional[int] = Field(default=None, ge=1, le=10000)
     paid_price_inr: Optional[int] = Field(default=None, ge=0, le=100000)
     paid_entries_limit: Optional[int] = None
+    standard_price_inr: Optional[int] = Field(default=None, ge=0, le=10000)
+    standard_entries_limit: Optional[int] = Field(default=None, ge=1, le=10000)
     currency: Optional[str] = None
     default_language: Optional[str] = None
     otp_mode: Optional[str] = None
@@ -249,6 +269,8 @@ class PlatformSettingsUpdateIn(BaseModel):
     whisper_model: Optional[str] = None
     claude_model: Optional[str] = None
     auto_reminder: Optional[str] = None
+    auto_reminder_day: Optional[str] = None
+    auto_reminder_time: Optional[str] = None
     wa_template: Optional[str] = None
     maintenance_mode: Optional[str] = None
     ai_provider: Optional[str] = None

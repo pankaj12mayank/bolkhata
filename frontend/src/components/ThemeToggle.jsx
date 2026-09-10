@@ -1,23 +1,21 @@
 import { useTheme } from '../context/ThemeContext'
+import { useLang } from '../context/LangContext'
+import { Sun, Moon } from 'lucide-react'
 
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme()
+  const { t } = useLang()
   const isLight = theme === 'light'
   return (
     <button
       onClick={toggleTheme}
-      aria-label="Theme badlein"
-      className="w-14 h-[30px] rounded-full bg-surface-2 border border-line relative flex-shrink-0"
+      aria-label={t('theme_toggle_label')}
+      className="w-[52px] h-7 rounded-full bg-slate-200 dark:bg-slate-700 relative flex-shrink-0 p-1 transition-colors duration-200"
     >
       <div
-        className="absolute top-[3px] left-[3px] w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] transition-transform duration-500"
-        style={{
-          background: 'linear-gradient(145deg,var(--gold),var(--gold-deep))',
-          transform: isLight ? 'translateX(26px)' : 'translateX(0)',
-          boxShadow: '0 3px 8px rgba(0,0,0,.35)',
-        }}
+        className={`w-5 h-5 rounded-full bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center transition-transform duration-200 ${isLight ? 'translate-x-6' : 'translate-x-0'}`}
       >
-        {isLight ? '☀' : '🌙'}
+        {isLight ? <Sun size={12} className="text-amber-500" /> : <Moon size={12} className="text-slate-400" />}
       </div>
     </button>
   )

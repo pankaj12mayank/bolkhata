@@ -4,22 +4,46 @@ function getToken() {
   return localStorage.getItem('bolkhata_token') || ''
 }
 
+export function isOnline() {
+  return typeof navigator !== 'undefined' ? navigator.onLine : true
+}
+
 export async function apiFetch(path, { method = 'GET', body, auth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   if (auth) {
     const token = getToken()
     if (token) headers.Authorization = `Bearer ${token}`
   }
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  if (!isOnline() && method === 'GET') {
+    throw new Error('OFFLINE')
+  }
+  let res
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+  } catch (e) {
+    if (!isOnline() || e.message.includes('Failed to fetch') || e.name === 'TypeError') {
+      throw new Error('OFFLINE')
+    }
+    throw e
+  }
   let data = null
   try { data = await res.json() } catch { /* empty body */ }
   if (!res.ok) {
-    const message = data?.detail || 'Kuch galat ho gaya. Dobara try karein.'
-    throw new Error(message)
+    let detail = data?.detail
+    let message = 'Kuch galat ho gaya. Dobara try karein.'
+    if (typeof detail === 'string') message = detail
+    else if (detail && typeof detail === 'object') {
+      message = detail.message || JSON.stringify(detail)
+    } else if (data?.detail) message = String(data.detail)
+    const err = new Error(message)
+    err.status = res.status
+    err.detail = detail
+    err.data = data
+    throw err
   }
   return data
 }
@@ -42,9 +66,16 @@ export const api = {
   todayEntries: () => apiFetch('/entries/today'),
 
   getBilling: () => apiFetch('/billing'),
-  upgradeBilling: () => apiFetch('/billing/upgrade', { method: 'POST' }),
-  createBillingOrder: () => apiFetch('/billing/create-order', { method: 'POST' }),
+  billingHistory: () => apiFetch('/billing/history'),
+  getPlans: () => apiFetch('/plans', { auth: false }),
+  upgradeBilling: (tier='Paid') => apiFetch('/billing/upgrade', { method: 'POST', body: { tier } }),
+  createBillingOrder: (tier='Paid') => apiFetch('/billing/create-order', { method: 'POST', body: { tier } }),
   verifyBilling: (payload) => apiFetch('/billing/verify', { method: 'POST', body: payload }),
+  getCashToday: () => apiFetch('/cash/today'),
+  saveCashToday: (payload) => apiFetch('/cash/today', { method: 'POST', body: payload }),
+  getCashHistory: () => apiFetch('/cash/history'),
+  getInsights: () => apiFetch('/insights'),
+  getInsightsDaily: () => apiFetch('/insights/daily'),
 
   // voice
   transcribeVoice: (file, language = 'Hinglish') => {
@@ -80,10 +111,17 @@ export const api = {
   },
 
   adminOverview: () => apiFetch('/admin/overview'),
+  adminOverviewChart: () => apiFetch('/admin/overview/chart'),
+  adminProfile: () => apiFetch('/admin/profile'),
+  updateAdminProfile: (payload) => apiFetch('/admin/profile', { method: 'PUT', body: payload }),
+  adminPlans: () => apiFetch('/admin/plans'),
+  adminUpdatePlans: (payload) => apiFetch('/admin/plans', { method: 'PUT', body: payload }),
   adminShops: (status) => apiFetch(`/admin/shops${status && status !== 'all' ? `?status=${status}` : ''}`),
   adminShopDetail: (id) => apiFetch(`/admin/shops/${id}`),
   adminSubscriptions: (status) => apiFetch(`/admin/subscriptions${status && status !== 'all' ? `?status=${status}` : ''}`),
   adminLogs: (status) => apiFetch(`/admin/logs${status && status !== 'all' ? `?status=${status}` : ''}`),
+  deleteLog: (id) => apiFetch(`/admin/logs/${id}`, { method: 'DELETE' }),
+  bulkDeleteLogs: (ids) => apiFetch('/admin/logs/bulk-delete', { method: 'POST', body: { ids } }),
   toggleShopStatus: (id, is_active) => apiFetch(`/admin/shops/${id}/status`, { method: 'PUT', body: { is_active } }),
   deleteShop: (id) => apiFetch(`/admin/shops/${id}`, { method: 'DELETE' }),
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
+import { useLang } from '../../context/LangContext'
 import { api } from '../../lib/api'
 import Button from '../../components/Button'
 
@@ -17,9 +18,11 @@ export default function Profile() {
   const { shopProfile, setShopProfile } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { showToast } = useToast()
+  const { t } = useLang()
   const [shopName, setShopName] = useState('')
   const [ownerName, setOwnerName] = useState('')
   const [language, setLanguage] = useState('Hinglish')
+  const [upiId, setUpiId] = useState('')
   const [autoReminder, setAutoReminder] = useState(true)
   const [voiceBeep, setVoiceBeep] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -28,14 +31,20 @@ export default function Profile() {
     setShopName(shopProfile?.shopName || '')
     setOwnerName(shopProfile?.ownerName || '')
     setLanguage(shopProfile?.language || 'Hinglish')
-  }, [shopProfile])
+    setUpiId(shopProfile?.upi_id || '')
+    // fetch fresh profile for upi
+    api.me().then(me => {
+      if (me.shop?.upi_id) setUpiId(me.shop.upi_id)
+      if (me.shop?.upi_id !== undefined) setShopProfile(prev => ({ ...prev, upi_id: me.shop.upi_id }))
+    }).catch(() => {})
+  }, [shopProfile?.shopName])
 
   const save = async () => {
     setBusy(true)
     try {
-      const updated = await api.updateShop({ shop_name: shopName, owner_name: ownerName, language })
-      setShopProfile({ ...shopProfile, shopName: updated.shop_name, ownerName: updated.owner_name, language: updated.language, phone: updated.phone })
-      showToast('Profile update ho gayi \u2713')
+      const updated = await api.updateShop({ shop_name: shopName, owner_name: ownerName, language, upi_id: upiId })
+      setShopProfile({ ...shopProfile, shopName: updated.shop_name, ownerName: updated.owner_name, language: updated.language, phone: updated.phone, upi_id: updated.upi_id })
+      showToast('toast_profile_saved')
     } catch (e) {
       showToast(e.message)
     } finally {
@@ -45,43 +54,44 @@ export default function Profile() {
 
   return (
     <div className="w-full">
-      <div className="mb-6">
-        <h1 className="font-display font-normal text-[24px] sm:text-[28px]">Profile</h1>
-        <p className="text-ink-dim text-[13px] sm:text-[14.5px] mt-1">Apni dukaan ki jaankari yahan update karein. Bhasha se voice hint badlega.</p>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-        <div className="bg-surface border border-line rounded-3xl p-4 sm:p-6">
+      <div className="flex flex-col gap-5 w-full">
+        <div className="bg-surface border border-line rounded-3xl p-5 sm:p-7 w-full">
           <div className="mb-3.5">
-            <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">Dukaan ka Naam</label>
+            <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">{t('pr_lbl_shop')}</label>
             <input value={shopName} onChange={e => setShopName(e.target.value)} className="w-full px-3.5 py-3 rounded-xl border border-line bg-surface-2 text-ink text-[14.5px] outline-none focus:border-[var(--gold)]" />
           </div>
           <div className="mb-3.5">
-            <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">Malik ka Naam</label>
+            <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">{t('pr_lbl_owner')}</label>
             <input value={ownerName} onChange={e => setOwnerName(e.target.value)} className="w-full px-3.5 py-3 rounded-xl border border-line bg-surface-2 text-ink text-[14.5px] outline-none focus:border-[var(--gold)]" />
           </div>
           <div className="mb-3.5">
-            <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">Phone Number</label>
+            <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">{t('pr_lbl_phone')}</label>
             <input value={shopProfile?.phone || ''} disabled className="w-full px-3.5 py-3 rounded-xl border border-line bg-surface-2 text-ink-dim text-[14.5px] outline-none" />
           </div>
+          <div className="mb-3.5">
+            <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">{t('pr_lbl_upi')}</label>
+            <input value={upiId} onChange={e => setUpiId(e.target.value)} placeholder="dukandarraja@okhdfcbank" className="w-full px-3.5 py-3 rounded-xl border border-line bg-surface-2 text-ink text-[14.5px] outline-none focus:border-[var(--gold)]" />
+            <p className="text-[11px] text-ink-dim mt-1">{t('pr_upi_hint')}</p>
+          </div>
           <div className="mb-4">
-            <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">Bhasha — Voice ke liye</label>
+            <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">{t('pr_lbl_lang')}</label>
             <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full px-3.5 py-3 rounded-xl border border-line bg-surface-2 text-ink text-[14.5px] outline-none focus:border-[var(--gold)]">
-              <option>Hinglish</option><option>Hindi</option><option>English</option><option>Marathi</option>
+              <option>Hinglish</option><option>Hindi</option><option>English</option><option>Marathi</option><option>Gujarati</option><option>Bengali</option>
             </select>
           </div>
-          <Button onClick={save} disabled={busy}>{busy ? 'Save ho raha hai...' : 'Save Karein'}</Button>
+          <Button onClick={save} disabled={busy}>{busy ? t('pr_btn_busy') : t('pr_btn_save')}</Button>
         </div>
-        <div className="bg-surface border border-line rounded-3xl p-6">
+        <div className="bg-surface border border-line rounded-3xl p-5 sm:p-7 w-full">
           <div className="flex items-center justify-between py-4 border-b border-line">
-            <div><b className="block text-[14.5px]">Dark Theme</b><span className="text-[12.5px] text-ink-dim">Raat mein aankhon ke liye aaram deh</span></div>
+            <div><b className="block text-[14.5px]">{t('pr_dark_t')}</b><span className="text-[12.5px] text-ink-dim">{t('pr_dark_sub')}</span></div>
             <Toggle on={theme === 'dark'} onClick={toggleTheme} />
           </div>
           <div className="flex items-center justify-between py-4 border-b border-line">
-            <div><b className="block text-[14.5px]">WhatsApp Reminder Auto-Suggest</b><span className="text-[12.5px] text-ink-dim">Overdue grahak ke liye suggestion</span></div>
+            <div><b className="block text-[14.5px]">{t('pr_wa_t')}</b><span className="text-[12.5px] text-ink-dim">{t('pr_wa_sub')}</span></div>
             <Toggle on={autoReminder} onClick={() => setAutoReminder(v => !v)} />
           </div>
           <div className="flex items-center justify-between py-4">
-            <div><b className="block text-[14.5px]">Voice Confirmation Awaaz</b><span className="text-[12.5px] text-ink-dim">Entry save hone par beep</span></div>
+            <div><b className="block text-[14.5px]">{t('pr_beep_t')}</b><span className="text-[12.5px] text-ink-dim">{t('pr_beep_sub')}</span></div>
             <Toggle on={voiceBeep} onClick={() => setVoiceBeep(v => !v)} />
           </div>
         </div>

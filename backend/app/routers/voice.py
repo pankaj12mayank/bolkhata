@@ -81,6 +81,29 @@ async def parse_text(
     result = parse(text, lang, ai_result)
     if result["amount"] <= 0:
         raise HTTPException(status_code=422, detail="Amount samajh nahi aaya — jaise 'Ramesh ko 500 udhaar diya' boliye")
+    # Attach disambiguation candidates if name is ambiguous
+    try:
+        name = result.get("customer_name") or ""
+        phone_hint = result.get("phone_hint")
+        if name and name != "Unknown":
+            from sqlalchemy import func
+            like_pat = f"%{name.lower()}%"
+            cands = db.query(models.Customer).filter(models.Customer.shop_id==shop.id, func.lower(models.Customer.name).like(like_pat)).all()
+            if phone_hint and cands:
+                filt = [c for c in cands if phone_hint in (c.phone or "")]
+                if filt:
+                    cands = filt
+            # If exact match exists, no need candidates
+            exact = [c for c in cands if c.name.lower()==name.lower()]
+            if exact:
+                cands = []
+            if len(cands) > 1:
+                result["candidates"] = [{"id": c.id, "name": c.name, "phone": c.phone or "", "balance": c.balance} for c in cands[:5]]
+            elif len(cands)==1 and cands[0].name.lower()!=name.lower():
+                # single partial -> also suggest
+                result["candidates"] = [{"id": c.id, "name": c.name, "phone": c.phone or "", "balance": c.balance} for c in cands[:5]]
+    except Exception:
+        pass
     return result
 
 @router.post("/transcribe-and-parse", response_model=schemas.VoiceParseOut)
@@ -118,4 +141,21 @@ async def transcribe_and_parse(
     if result["amount"] <= 0:
         raise HTTPException(status_code=422, detail=f"Text samajh aaya: '{text}' par amount nahi mila")
     result["raw_text"] = text
+    # Same candidate logic for transcribe-and-parse
+    try:
+        name = result.get("customer_name") or ""
+        phone_hint = result.get("phone_hint")
+        if name and name != "Unknown":
+            from sqlalchemy import func
+            like_pat = f"%{name.lower()}%"
+            cands = db.query(models.Customer).filter(models.Customer.shop_id==shop.id, func.lower(models.Customer.name).like(like_pat)).all()
+            if phone_hint and cands:
+                filt = [c for c in cands if phone_hint in (c.phone or "")]
+                if filt: cands = filt
+            exact = [c for c in cands if c.name.lower()==name.lower()]
+            if exact:
+                cands = []
+            if len(cands) >= 1:
+                result["candidates"] = [{"id": c.id, "name": c.name, "phone": c.phone or "", "balance": c.balance} for c in cands[:5]]
+    except: pass
     return result

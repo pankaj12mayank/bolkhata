@@ -6,6 +6,7 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [role, setRole] = useState(null) // 'user' | 'admin' | null
   const [shopProfile, setShopProfileState] = useState(null)
+  const [adminProfile, setAdminProfileState] = useState(null)
   const [booting, setBooting] = useState(true)
 
   // Restore session on page load if a token already exists
@@ -16,6 +17,7 @@ export function AuthProvider({ children }) {
         const me = await api.me()
         if (me.role === 'admin') {
           setRole('admin')
+          setAdminProfileState({ name: me.name || 'Admin', email: me.email || '' })
         } else {
           setRole('user')
           setShopProfileState({
@@ -40,15 +42,17 @@ export function AuthProvider({ children }) {
   }
 
   const setShopProfile = (profile) => setShopProfileState(profile)
+  const setAdminProfile = (profile) => setAdminProfileState(profile)
 
   const logout = () => {
     clearToken()
     setRole(null)
     setShopProfileState(null)
+    setAdminProfileState(null)
   }
 
   return (
-    <AuthContext.Provider value={{ role, booting, loginWithToken, logout, shopProfile, setShopProfile }}>
+    <AuthContext.Provider value={{ role, booting, loginWithToken, logout, shopProfile, setShopProfile, adminProfile, setAdminProfile }}>
       {children}
     </AuthContext.Provider>
   )

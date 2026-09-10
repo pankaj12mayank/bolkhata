@@ -1,198 +1,193 @@
-# BolKhata — Voice-First Udhaar Tracker for Bharat
+# BolKhata — Voice-First Udhaar & Khata Tracker for Bharat 🇮🇳
 
-> **Bas boliye, hisaab ho jayega.** Kirana dukaandaron ke liye Hinglish/Hindi/English voice se udhaar track karo — type karne ki zaroorat nahi.
+> **Bas boliye, hisaab ho jayega.** Kirana dukaandaron ke liye Hinglish/Hindi/English voice se udhaar track karo — type karne ki zaroorat nahi. 100% Offline-ready PWA, Dynamic Plans System, Automated Reminders & Razorpay Payments.
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688)]()
 [![React](https://img.shields.io/badge/React-18-61DAFB)]()
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF)]()
+[![PWA](https://img.shields.io/badge/PWA-Ready-4A90E2)]()
 [![Postgres](https://img.shields.io/badge/Postgres-ready-336791)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-Two panels, one database, production-ready:
-
-```
-bolkhata/
-├── backend/   FastAPI + SQLAlchemy + Postgres/SQLite + JWT + Razorpay + Whisper + AI
-└── frontend/  React + Vite + Tailwind — Landing + Dukaandaar (Hindi) + Admin (English)
-```
-
 ---
 
-## ✨ Features — 100% Configurable from Admin
+## 🚀 Key Highlights & Available System Features
 
-| Area | How it works | Free vs Paid |
-|------|--------------|--------------|
-| **Voice (STT)** | Browser **Web Speech API** (free, no key, Chrome) tries first → fallback to **OpenAI Whisper** (`whisper-1`) or custom endpoint | Browser = free, Whisper ≈ $0.006/min |
-| **AI Parsing** | **Generic OpenAI-compatible** — Groq (cheap/fast), OpenAI, OpenRouter, Anthropic Claude, Ollama local, or Custom. Set `Base URL + Key + Model` in Admin → Test | `local` = rule-based Hinglish parser (no key), paid = 95% accuracy |
-| **Auth (OTP)** | `dev` → `1234` always (free) | `MSG91 / Twilio / Custom` → real SMS via `Base URL + Key + Template` |
-| **WhatsApp** | `wa.me` link (free) — button opens WhatsApp pre-filled, shopkeeper taps Send | `Twilio / Interakt / Custom` → auto-send via API |
-| **Billing** | Razorpay Orders + signature verify + webhook | Mock mode without keys (no charge), live with keys |
-| **Shops** | Active/Inactive toggle + permanent delete (global popup, theme-aware) | Admin controls |
-| **Reset** | **Demo-safe** — deletes user shops only, keeps `9876543210` + `9998887771-74` + Settings |  |
-
-All toggles live in **Admin → Settings** (`Admin English`): Business Rules, Razorpay, AI, STT, WhatsApp, OTP, Danger Zone — **Save → instant** across app. No `.env` edit needed. Every key shows `****` after save, `Test →` verifies in-app.
+- 🎙️ **Voice-First AI Udhaar Entry**: Speech-to-Text recognition via **Browser Web Speech API** (Free/Offline), **In-Browser Local Whisper Tiny** (Offline PWA), or **OpenAI Whisper API**. Automatically extracts Customer Name, Amount, Type (`credit_given` / `payment_received`), and Hinglish numbers (*"Ramesh ko paanch sau udhaar diya"* → ₹500).
+- 📲 **100% Offline PWA & Queue Sync**: Full ServiceWorker PWA support (`sw.js`). Includes offline local voice parsing, offline customer ledger, and an IndexedDB action queue that automatically syncs pending entries when connectivity returns.
+- 👑 **Dynamic Admin Plans Management**: Centrally manage Free, Standard (Pro), and Paid tiers from Admin (`/admin/plans`). Configure price, entry limits (-1 for unlimited), featured badges, and Hindi/English feature lists in real-time.
+- 💳 **Razorpay & Mock Payment Gateway**: Complete subscription checkout integration with Razorpay Webhook signatures (`payment.captured` & `payment.failed`) and zero-charge Mock Mode for testing.
+- ⏰ **Scheduled Auto-Reminders & UPI Pay Links**: Background scheduler for weekly WhatsApp & SMS reminders. Automatically generates `upi://pay?pa=...` links pre-filled with customer balance.
+- 📊 **Cash Counter & Daily Reconciliation**: End-of-day denomination counter (₹2000, ₹500, ₹200, ₹100, ₹50, ₹20, ₹10, ₹5, ₹2, ₹1) with expected cash variance calculations and 7-day history.
+- 📑 **CSV Ledger Export**: Standard and Paid tier gated CSV exports for complete customer transaction histories and shop records.
+- 🔐 **Hidden Admin Access & Eye Password Toggles**: Admin login is completely hidden from public UI landing pages (accessible only via `/admin` or `/bolkhata`). Includes reusable `SecretInput` eye-toggle components across all API keys, secrets, and password fields.
+- 🛡️ **Primary Key Data Protection**: Email and Phone numbers are strictly protected as immutable primary keys across user and admin profiles.
+- 🎨 **Modern Full-Width Responsive Design**: Clean 100% full-width stacked card design, high-contrast dark/light mode toggle, custom iOS-style toggle rows, and 100% language key parity across Hindi and English (628 keys).
 
 ---
 
 ## 🧱 Tech Stack
 
-**Backend:** `FastAPI 0.111` · `SQLAlchemy 2` · `Pydantic 2` · `python-jose JWT` · `psycopg2-binary` · `requests/httpx` · `openai/anthropic` (optional)
-**Frontend:** `React 18` · `Vite 5` · `Tailwind 3` · `react-router-dom 6` · `Manrope / Yatra One / IBM Plex Mono / Kalam`
-**DB:** `SQLite` (dev, `backend/bolkhata.db`) ↔ `Postgres` (prod via `DATABASE_URL=postgresql+psycopg2://...`)
-**Design:** CSS vars `var(--gold), --surface, --ink, --line)` — `html.light / html.dark` — grain, shimmer, 3D `floatBook / orbBreathe / pulseRing`, page `cinematicIn`, toast right-bottom.
+### Backend
+- **Framework**: `FastAPI 0.111.0`
+- **Database**: `SQLAlchemy 2.0` (SQLite for local dev `backend/bolkhata.db`, PostgreSQL for production)
+- **Security & Auth**: `python-jose` (JWT authentication), Passlib/PBKDF2 password hashing, rate-limited OTP handler
+- **Payments**: Razorpay SDK & HMAC Webhook verification
+- **Scheduler**: Background threading worker for automated weekly reminders
+- **Exports**: Native streaming CSV export module
+
+### Frontend
+- **Framework**: `React 18` + `Vite 5` (PWA with `vite-plugin-pwa` / Workbox)
+- **Styling**: Vanilla CSS + Tailwind utilities, HSL CSS variables, custom glassmorphism & grain overlays
+- **Icons & Motion**: `lucide-react`, `framer-motion`
+- **Offline ML & STT**: `@xenova/transformers` (In-browser local Whisper model) + Web Speech API fallback + IndexedDB storage
+- **Localization**: Custom `LangContext` with complete Hindi (`hi`) and English (`en`) dictionary parity (628 keys)
 
 ---
 
-## 📂 Project Structure
+## 📂 Codebase Structure
 
 ```
-backend/
-  app/
-    main.py              # lifespan, CORS, seed_demo_data (5 shops)
-    config.py            # env + fallback
-    database.py          # SQLite check_same_thread / Postgres pooling
-    models.py            # Shop, Customer, Entry, Reminder, Subscription, PlatformSettings (is_active, ai_provider, stt_provider, whatsapp_provider, otp_provider ...)
-    schemas.py           # Pydantic v2
-    security.py          # JWT, in-memory OTP + rate-limit (3/10min, 5 attempts)
-    routers/
-      auth.py            # /api/auth/otp/send, /verify, /admin/login, /me
-      customers.py       # CRUD + wa.me link + auto-send
-      entries.py         # POST /api/entries (limit check, Saade handling, atomic balance) + GET /today
-      billing.py         # /billing, /create-order, /verify, /webhook
-      admin.py           # /admin/overview, /shops, /shops/{id}/status, DELETE, /subscriptions, /logs
-      shop.py            # PUT /api/shop
-      settings.py        # GET/PUT /api/admin/settings + /test/{ai,stt,whatsapp,otp,razorpay} + /reset
-      voice.py           # /voice/transcribe, /parse, /transcribe-and-parse
-    services/
-      settings_service.py # singleton id=1, env fallback, mask_secret
-      parse_service.py    # Hindi numbers (paanch sau=500, saade chaar sau=450), to→John, generic_ai_parse
-      voice_service.py    # Whisper via base_url
-      razorpay_service.py # order, verify_signature
-      whatsapp_service.py # wa.me + Twilio/Interakt/custom
-      otp_service.py      # dev / msg91 / twilio / custom
-frontend/
-  src/
-    App.jsx              # Theme > Toast > Auth > ShopData > Routes + PageLoader 180ms + ScrollToTop + 404
-    components/ Logo.jsx (header=favicon=loader same SVG), GlobalPopup.jsx (theme, danger/primary), PageLoader.jsx (logo only, 3D), AILoader.jsx (cinematic), Button.jsx, Badge.jsx, Sidebar.jsx, Topbar.jsx, ProtectedRoute.jsx, ...
-    context/ AuthContext.jsx, ShopDataContext.jsx (refreshAll), ThemeContext.jsx (localStorage), ToastContext.jsx (right-6 bottom-6 Hindi)
-    pages/ Landing.jsx (responsive hero, mobile nav), LoginGateway.jsx, DukaandaarLogin.jsx, AdminLogin.jsx, Onboarding.jsx, user/Home.jsx, NewEntry.jsx (Browser Speech → MediaRecorder → Whisper), CustomerList.jsx (cards+table), CustomerDetail.jsx, Billing.jsx, Profile.jsx, admin/Overview.jsx, Shops.jsx (Active/Inactive/Delete + popup), ShopDetail.jsx, Subscriptions.jsx, Logs.jsx, Settings.jsx (w-full, Simple/Advanced, 1 Save top)
-    lib/ api.js, format.js
-  public/favicon.svg     # same as header Logo
-  index.html             # <link rel="icon" href="/favicon.svg">
+bolkhata/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # Application lifespan, CORS, seed demo data
+│   │   ├── config.py            # Environment variables & system defaults
+│   │   ├── database.py          # Database session pooling (SQLite/Postgres)
+│   │   ├── models.py            # SQLAlchemy models (Shop, Customer, Entry, Subscription, PlatformSettings)
+│   │   ├── schemas.py           # Pydantic v2 validation schemas
+│   │   ├── security.py          # JWT creation/verification & OTP rate limiting
+│   │   ├── routers/
+│   │   │   ├── auth.py          # OTP login, Admin login (/admin/login), Profile endpoints
+│   │   │   ├── customers.py     # Customer CRUD, WhatsApp link generator & reminders
+│   │   │   ├── entries.py       # Voice/Manual entry creation & daily transaction logs
+│   │   │   ├── billing.py       # Order creation, Razorpay checkout & webhook handler
+│   │   │   ├── admin.py         # Admin dashboard analytics, Shops, Subscriptions, Plans, Logs
+│   │   │   ├── settings.py      # Platform configuration settings, Test endpoints & Reset
+│   │   │   ├── voice.py         # Voice transcription & AI Hinglish parser routes
+│   │   │   └── export.py        # CSV data export for shop ledgers
+│   │   └── services/
+│   │       ├── parse_service.py # Hinglish number parsing (paanch sau → 500, saade chaar sau → 450)
+│   │       ├── voice_service.py # Whisper API integration
+│   │       ├── razorpay_service.py # Razorpay order creation & signature validation
+│   │       ├── remind_service.py # Automated reminder builder with UPI pay link generator
+│   │       └── reminder_job.py # Background scheduler worker for scheduled reminders
+│   ├── bolkhata.db             # Local SQLite database
+│   ├── requirements.txt        # Python backend dependencies
+│   └── .env.example            # Environment template
+│
+└── frontend/
+    ├── src/
+    │   ├── App.jsx              # Main router & application providers
+    │   ├── components/          # Reusable UI components (Button, Badge, SecretInput, Sidebar, Logo, etc.)
+    │   ├── context/             # AuthContext, ShopDataContext, LangContext, ThemeContext, ToastContext
+    │   ├── lib/                 # API client (api.js), Offline IndexedDB queue (offline.js), Local STT (stt.js)
+    │   └── pages/
+    │       ├── Landing.jsx          # Public marketing page
+    │       ├── DukaandaarLogin.jsx  # Merchant OTP login & registration
+    │       ├── AdminLogin.jsx      # Secret Admin login (/admin or /bolkhata)
+    │       ├── user/                # Merchant portal (Home, NewEntry, CustomerList, CustomerDetail, CashCounter, Billing, Profile)
+    │       └── admin/               # Admin panel (Overview, Shops, ShopDetail, Subscriptions, Plans, Payments, Settings, Logs, Configuration, AdminProfile)
+    ├── check-lang.js            # Translation key parity verification script
+    ├── vite.config.js           # Vite & PWA ServiceWorker configuration
+    └── package.json             # Frontend dependencies
 ```
 
 ---
 
-## 🚀 Quick Start
+## ⚡ Quick Start Guide
 
-**1. Backend — Terminal 1**
+### 1. Backend Setup (Terminal 1)
 ```bash
 cd backend
+
+# Create & activate virtual environment
 python -m venv venv
 # Windows: venv\Scripts\activate
 # macOS/Linux: source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # edit JWT_SECRET, ADMIN_EMAIL, DATABASE_URL if needed
-uvicorn app.main:app --reload --port 8000
-# → creates backend/bolkhata.db + 5 demo shops
-# → PlatformSettings id=1 auto-created
-```
 
-**2. Frontend — Terminal 2**
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment variables
+cp .env.example .env
+
+# Run FastAPI backend server
+uvicorn app.main:app --reload --port 8000
+```
+> Server starts at `http://localhost:8000`. Auto-initializes SQLite database with demo shops and platform settings.
+
+### 2. Frontend Setup (Terminal 2)
 ```bash
 cd frontend
-cp .env.example .env   # VITE_API_BASE=http://localhost:8000/api
+
+# Install dependencies
 npm install
-npm run dev            # http://localhost:5173
+
+# Run Vite development server
+npm run dev
 ```
+> Frontend application opens at `http://localhost:5173`.
 
 ---
 
-## 🔑 Demo Credentials
+## 🔑 Demo Access & Login Credentials
 
-| Role | Login | OTP / Password |
-|------|-------|---------------|
-| **Dukaandaar (demo, pre-filled)** | `9876543210` → Login tab | `1234` (dev mode) — 4 customers, 6 entries |
-| **Dukaandaar (new)** | Any 10-digit → Nayi Dukaan | `1234` → shop name/owner → empty dashboard |
-| **Admin** | `admin@bolkhata.in` | `admin123` — Overview/Shops/Settings/Logs live |
-
-Demo phones kept safe on **Reset**: `9876543210`, `9998887771-74` are never deleted.
+| Role | Access URL | Credentials | Demo Data |
+|------|------------|-------------|-----------|
+| **Dukaandaar (Merchant)** | `http://localhost:5173/login` | Phone: `9876543210` → OTP: `1234` | Pre-loaded with 4 customers & entries |
+| **New Merchant** | `http://localhost:5173/login` | Any 10-digit phone → OTP: `1234` | Creates brand new shop account |
+| **Admin Panel** | `http://localhost:5173/admin` | Email: `admin@bolkhata.in`<br>Password: `admin123` | Full administrative control & analytics |
 
 ---
 
-## ⚙️ Admin → Settings — What you can configure
+## ⚙️ Admin Control & Platform Configuration
 
-* **Business:** `free_entries_limit` (15), `paid_price_inr` (99), `paid_entries_limit` (-1=unlimited), `default_language`, `jwt_expire`, `wa_template`, `auto_reminder`, `maintenance`
-* **Razorpay:** `razorpay_key_id/secret/webhook_secret/test_mode` — Test creates ₹1 order
-* **AI:** `ai_provider` (local/groq/openai/openrouter/anthropic/ollama/custom) + `ai_base_url/api_key/model` — Test via `chat/completions`
-* **STT:** `stt_provider` (browser=free Web Speech / openai / custom) + `stt_base_url/api_key/model` — Browser needs no key
-* **WhatsApp:** `whatsapp_provider` (wa_me=free link / twilio/interakt/custom) + `base_url/api_key/phone_id`
-* **OTP:** `otp_provider` (dev=1234 / msg91/twilio/custom) + `base_url/api_key/template_id` + `otp_expiry`
-* **Danger:** `RESET` → deletes user shops only, demo + Settings remain
-
-All masked `****` after save, `Test →` buttons verify in-app.
+Access `/admin/settings`, `/admin/plans`, `/admin/payments`, and `/admin/configuration` to configure:
+1. **Dynamic Plans (`/admin/plans`)**: Custom pricing, entry limits (-1 for unlimited), tags, and Hindi/English feature bullets.
+2. **Payment Gateway (`/admin/payments`)**: Razorpay Key ID, Secret, Webhook Secret, and Test Mode toggle.
+3. **AI & Speech Providers (`/admin/configuration`)**: OpenAI, Groq, OpenRouter, Anthropic, Ollama, or Local Hinglish parser setup with in-app test buttons.
+4. **Automated Reminders & WhatsApp (`/admin/settings`)**: Reminder day, time, message templates, and automated WhatsApp settings.
+5. **Danger Zone (`/admin/settings`)**: Safe database reset (preserves demo accounts `9876543210`, `9998887771-74` and platform settings).
 
 ---
 
-## 🔌 API (prefix `/api`)
+## 📡 API Overview (Prefix `/api`)
 
-* `POST /auth/otp/send` `{phone}` → `{dev_otp?}` (rate 3/10min)
-* `POST /auth/otp/verify` `{phone,otp,is_register,shop_name}` → `{token,role}`
-* `POST /auth/admin/login` `{email,password}` → `{token,role:admin}`
-* `GET /auth/me` (Bearer) → shop or admin
-* `GET /customers`, `POST /customers`, `GET/PUT/DELETE /customers/{id}`, `POST /customers/{id}/remind` → `{wa_link, auto_sent}`
-* `POST /entries` `{customer_name,amount,type,raw_voice_text}` + `GET /entries/today` — inactive shops 403, `Saade` handled, `amount>0`, atomic `entries_used`
-* `GET /billing`, `POST /billing/create-order`, `POST /billing/verify`, `POST /billing/webhook` (HMAC)
-* `GET /admin/overview|/shops|/shops/{id}|/subscriptions|/logs` + `PUT /shops/{id}/status` + `DELETE /shops/{id}`
-* `GET/PUT /admin/settings` + `POST /test/{ai,stt,whatsapp,otp,razorpay,claude}` + `POST /reset`
-* `POST /voice/transcribe` (multipart `file,language`) + `POST /voice/parse` `{text,language}` + `POST /voice/transcribe-and-parse` — browser vs Whisper
-
----
-
-## 🌗 UI/UX
-
-* **Global:** Logo = favicon = loader (rounded square gold mic), `PageLoader` logo-only 3D (`floatBook` 110px), `AILoader` cinematic 12 waves, `GlobalPopup` theme-aware (gold/danger), `Toast` right-6 bottom-6 Hindi with `✓/!`
-* **Responsive:** Every page `w-full` `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` `p-4 sm:p-6` `text-[24px] sm:text-[28px]` + mobile cards (`md:hidden`) + tables (`hidden md:block overflow-x-auto`) + bottom nav `lg:hidden`
-* **Language:** **Admin** pure English, **Dukaandaar** Hinglish/Hindi (`Namaste, Kul udhaar, Naya Entry Bolein`) — `default_language` controls hint
-* **Theme:** `var(--gold/surface/ink/line)` + `html.light` toggle `localStorage`, grain `.035`, scrollbar `ink-dim`
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/auth/otp/send` | `POST` | Send OTP to merchant phone (rate-limited) |
+| `/auth/otp/verify` | `POST` | Verify OTP & issue JWT token |
+| `/auth/admin/login` | `POST` | Admin login authentication |
+| `/customers` | `GET / POST` | List or create shop customers |
+| `/customers/{id}` | `GET / PUT / DELETE` | Customer ledger details & management |
+| `/customers/{id}/remind` | `POST` | Generate WhatsApp reminder & UPI link |
+| `/entries` | `POST / GET` | Add voice/manual entry (atomic balance update) |
+| `/cash/today` | `GET / POST` | Get or save end-of-day cash denominations |
+| `/billing/create-order` | `POST` | Create Razorpay subscription order |
+| `/billing/verify` | `POST` | Verify Razorpay payment signature |
+| `/export/csv` | `GET` | Export shop ledger transactions to CSV |
+| `/admin/plans` | `GET / PUT` | Manage dynamic plan tiers & limits |
+| `/admin/shops` | `GET / PUT / DELETE` | Manage merchant shop status & accounts |
 
 ---
 
-## 🐘 Postgres
+## 🚢 Production Deployment
 
-```bash
-# .env
-DATABASE_URL=postgresql+psycopg2://user:pass@localhost:5432/bolkhata
-# or
-DATABASE_URL=postgresql+psycopg2://user:pass@host:5432/bolkhata?sslmode=require
-```
+1. **Backend Deployment (Render / Railway / AWS)**:
+   - Set `DATABASE_URL` to production PostgreSQL (`postgresql+psycopg2://...`).
+   - Set `JWT_SECRET` to a strong random key.
+   - Set `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+   - Command: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
 
-`database.py` auto pooling `pool_pre_ping, size 5`. Migrations in `main.py:_migrate_sqlite` add `period_start, is_active, razorpay_order_id, ai_provider...` if missing. No `alembic` needed for demo; production add `alembic` if you want.
-
----
-
-## 🚢 Deployment
-
-* **Backend:** Render / Railway / Fly.io — set `DATABASE_URL` (Postgres), `JWT_SECRET` (long random), `FRONTEND_ORIGIN` (your Vercel URL), `ADMIN_EMAIL/PASSWORD`
-* **Frontend:** Vercel / Netlify — set `VITE_API_BASE=https://your-backend/api` → `npm run build` (`dist/` → `favicon.svg` included)
-* **Webhooks:** Razorpay Dashboard → `https://your-backend/api/billing/webhook` + set `razorpay_webhook_secret` in Settings
-
----
-
-## 🔒 Going to Production — Checklist
-
-1. Change `JWT_SECRET` to 32+ random chars
-2. Create real `admins` table (hashed) or keep env but strong password
-3. Set real SMS provider (`otp_provider=msg91`, Base URL, Key) — stop leaking `dev_otp`
-4. Set real AI/STT if you want cloud (Groq cheap, or keep `local`/`browser` free)
-5. Set `whatsapp_provider` if you want auto-send (else `wa.me` free)
-6. Add `OPENAI_API_KEY` / `RAZORPAY_KEY` via Settings (not `.env`) + Test
-7. `DATABASE_URL` → Postgres
+2. **Frontend Deployment (Vercel / Netlify)**:
+   - Set `VITE_API_BASE=https://your-backend-api.com/api`.
+   - Command: `npm run build` (outputs optimized production bundle to `dist/`).
 
 ---
 
 ## 📜 License
 
-MIT — for Bharat ke dukaandaron ke liye.
+MIT License — Created for Bharat's Kirana Dukaandaars.
 
-**Made with ❤️ — BolKhata, Bas Boliye, Hisaab Ho Jayega.**
+**Made with ❤️ — BolKhata: Bas Boliye, Hisaab Ho Jayega.**

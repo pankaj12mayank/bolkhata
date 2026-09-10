@@ -1,6 +1,8 @@
 import Logo from './Logo'
+import { useLang } from '../context/LangContext'
 
-export default function GlobalPopup({ open, onClose, onConfirm, title, message, confirmText = "Haan, Pakka", cancelText = "Nahi", variant = "danger", loading = false }) {
+export default function GlobalPopup({ open, onClose, onConfirm, title, message, confirmText, cancelText, variant = "danger", loading = false }) {
+  const { t } = useLang()
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
@@ -15,13 +17,13 @@ export default function GlobalPopup({ open, onClose, onConfirm, title, message, 
           <p className="text-ink-dim text-[13.5px] mt-2 leading-relaxed">{message}</p>
           <div className="flex gap-3 w-full mt-6">
             <button onClick={onClose} disabled={loading} className="flex-1 py-3.5 rounded-full border-[1.5px] border-line text-ink font-bold text-[13.5px] bg-surface-2 hover:border-[var(--gold)] hover:text-gold transition-all disabled:opacity-50 active:scale-[0.98]">
-              {cancelText}
+              {cancelText || t('pop_no')}
             </button>
             <button onClick={onConfirm} disabled={loading} className={`flex-1 py-3.5 rounded-full font-bold text-[13.5px] text-[#1A1206] shadow-[0_10px_22px_-10px_rgba(232,169,59,.5)] hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98] ${variant === 'danger' ? 'bg-[linear-gradient(135deg,var(--maroon),#9f2a1f)] text-white' : 'bg-[linear-gradient(135deg,var(--gold),var(--gold-deep))]'}`}>
-              {loading ? 'Ho raha hai...' : confirmText}
+              {loading ? t('pop_busy') : (confirmText || t('pop_yes'))}
             </button>
           </div>
-          <p className="text-[11px] text-ink-dim mt-3">BolKhata • System Theme: <span className="font-mono text-gold">{document.documentElement.classList.contains('light') ? 'Light' : 'Dark'}</span></p>
+          <p className="text-[11px] text-ink-dim mt-3">{t('pop_theme_pfx')}<span className="font-mono text-gold">{document.documentElement.classList.contains('light') ? t('pop_light') : t('pop_dark')}</span></p>
         </div>
       </div>
     </div>

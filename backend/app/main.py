@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone, date
 
+import asyncio
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -14,7 +16,7 @@ from . import models
 
 from .config import settings
 
-from .routers import auth, customers, entries, billing, admin, shop, settings as settings_router, voice
+from .routers import auth, customers, entries, billing, admin, shop, settings as settings_router, voice, cash, insights, export as export_router
 
 def _migrate_sqlite():
     try:
@@ -29,9 +31,26 @@ def _migrate_sqlite():
                 if 'is_active' not in cols:
                     conn.execute(text("ALTER TABLE shops ADD COLUMN is_active VARCHAR DEFAULT 'true'"))
                     conn.execute(text("UPDATE shops SET is_active = 'true' WHERE is_active IS NULL"))
+                if 'upi_id' not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN upi_id VARCHAR DEFAULT ''"))
+                if 'shop_photo' not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN shop_photo VARCHAR DEFAULT ''"))
+                if 'entries_limit' in cols:
+                    # bump old 15 to 100
+                    try:
+                        conn.execute(text("UPDATE shops SET entries_limit = 100 WHERE entries_limit = 15"))
+                    except: pass
                 sub_cols = [c["name"] for c in insp.get_columns('subscriptions')]
                 if 'razorpay_order_id' not in sub_cols:
                     conn.execute(text("ALTER TABLE subscriptions ADD COLUMN razorpay_order_id VARCHAR"))
+            # customers upi
+            try:
+                ccols = [c["name"] for c in insp.get_columns('customers')]
+                with engine.begin() as conn:
+                    if 'upi_id' not in ccols:
+                        conn.execute(text("ALTER TABLE customers ADD COLUMN upi_id VARCHAR DEFAULT ''"))
+            except Exception as e:
+                print(f"customer migrate fail {e}")
         # platform_settings new columns
         if 'platform_settings' in insp.get_table_names():
             ps_cols = [c["name"] for c in insp.get_columns('platform_settings')]
@@ -52,6 +71,15 @@ def _migrate_sqlite():
                 'otp_base_url': "VARCHAR DEFAULT ''",
                 'otp_api_key': "VARCHAR DEFAULT ''",
                 'otp_template_id': "VARCHAR DEFAULT ''",
+                'standard_price_inr': "INTEGER DEFAULT 49",
+                'standard_entries_limit': "INTEGER DEFAULT 500",
+                'plans_json': "TEXT DEFAULT ''",
+                'auto_reminder_day': "VARCHAR DEFAULT 'mon'",
+                'auto_reminder_time': "VARCHAR DEFAULT '09:00'",
+                'last_reminder_run_date': "DATE",
+                'admin_name': "VARCHAR DEFAULT ''",
+                'admin_email': "VARCHAR DEFAULT ''",
+                'admin_password_hash': "VARCHAR DEFAULT ''",
             }
             with engine.begin() as conn:
                 for col, typ in new_cols.items():
@@ -61,6 +89,10 @@ def _migrate_sqlite():
                         except Exception as e:
                             print(f"add col {col} failed: {e}")
                         ps_cols.append(col)
+                # bump free limit 15->100
+                try:
+                    conn.execute(text("UPDATE platform_settings SET free_entries_limit=100 WHERE free_entries_limit=15"))
+                except: pass
     except Exception as e:
         print(f"Migration check failed: {e}")
 
@@ -96,7 +128,34 @@ async def lifespan(app: FastAPI):
 
     seed_demo_data()
 
+    reminder_task = asyncio.create_task(_reminder_sweep_loop())
+
     yield
+
+    reminder_task.cancel()
+
+    try:
+        await reminder_task
+    except Exception:
+        pass
+
+
+async def _reminder_sweep_loop():
+    """Background loop — checks every 60s whether scheduled auto-reminders should fire."""
+    from .services.reminder_job import run_daily_reminders
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                run_daily_reminders(db)
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"reminder sweep error: {e}")
+        try:
+            await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            raise
 
 app = FastAPI(title="BolKhata API", lifespan=lifespan)
 
@@ -129,6 +188,14 @@ app.include_router(shop.router)
 app.include_router(settings_router.router)
 
 app.include_router(voice.router)
+
+app.include_router(cash.router)
+
+app.include_router(insights.router)
+
+app.include_router(export_router.router)
+
+app.include_router(billing.public)
 
 @app.get("/api/health")
 
