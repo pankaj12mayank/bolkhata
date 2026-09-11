@@ -96,7 +96,7 @@ export function transcribeBrowser(langHint = 'hi-IN') {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) return reject(new Error('Browser Speech not supported'))
     const rec = new SR()
-    const map = { Hinglish: 'hi-IN', Hindi: 'hi-IN', English: 'en-IN', Marathi: 'mr-IN', Gujarati: 'gu-IN', Bengali: 'bn-IN', Tamil: 'ta-IN' }
+    const map = { Hindi: 'hi-IN', English: 'en-IN', hi: 'hi-IN', en: 'en-IN' }
     rec.lang = map[langHint] || langHint || 'hi-IN'
     rec.interimResults = false
     rec.maxAlternatives = 1

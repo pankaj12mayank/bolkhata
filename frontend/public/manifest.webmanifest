@@ -1,0 +1,19 @@
+{
+  "name": "BolKhata - Voice Udhaar Tracker",
+  "short_name": "BolKhata",
+  "description": "Bas boliye, hisaab ho jayega - Kirana dukaandaron ke liye voice se udhaar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#14101B",
+  "theme_color": "#14101B",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

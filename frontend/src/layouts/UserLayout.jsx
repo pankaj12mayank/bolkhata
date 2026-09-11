@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Topbar from '../components/Topbar'
 import OfflineBadge from '../components/OfflineBadge'
+import VoiceCommand from '../components/VoiceCommand'
 import { useAuth } from '../context/AuthContext'
 import { useShopData } from '../context/ShopDataContext'
 import { useLang } from '../context/LangContext'
@@ -68,6 +69,7 @@ export default function UserLayout() {
       </main>
 
       <OfflineBadge />
+      <VoiceCommand />
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         <div className="flex justify-around">
           {bottomNav.map(item => item.mic ? (

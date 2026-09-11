@@ -5,14 +5,8 @@ import { useToast } from '../../context/ToastContext'
 import { useLang } from '../../context/LangContext'
 import { api } from '../../lib/api'
 import Button from '../../components/Button'
-
-function Toggle({ on, onClick }) {
-  return (
-    <button onClick={onClick} className={`w-11 h-6 rounded-full relative flex-shrink-0 border transition-colors ${on ? 'bg-[rgba(79,163,122,.2)] border-green' : 'bg-surface-2 border-line'}`}>
-      <div className={`absolute top-0.5 w-[18px] h-[18px] rounded-full transition-transform ${on ? 'translate-x-5 bg-green' : 'translate-x-0.5 bg-ink-dim'}`} />
-    </button>
-  )
-}
+import Toggle from '../../components/Toggle'
+import Select from '../../components/Select'
 
 export default function Profile() {
   const { shopProfile, setShopProfile } = useAuth()
@@ -21,7 +15,7 @@ export default function Profile() {
   const { t } = useLang()
   const [shopName, setShopName] = useState('')
   const [ownerName, setOwnerName] = useState('')
-  const [language, setLanguage] = useState('Hinglish')
+  const [language, setLanguage] = useState('Hindi')
   const [upiId, setUpiId] = useState('')
   const [autoReminder, setAutoReminder] = useState(true)
   const [voiceBeep, setVoiceBeep] = useState(false)
@@ -30,7 +24,7 @@ export default function Profile() {
   useEffect(() => {
     setShopName(shopProfile?.shopName || '')
     setOwnerName(shopProfile?.ownerName || '')
-    setLanguage(shopProfile?.language || 'Hinglish')
+    setLanguage(shopProfile?.language || 'Hindi')
     setUpiId(shopProfile?.upi_id || '')
     // fetch fresh profile for upi
     api.me().then(me => {
@@ -75,9 +69,9 @@ export default function Profile() {
           </div>
           <div className="mb-4">
             <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">{t('pr_lbl_lang')}</label>
-            <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full px-3.5 py-3 rounded-xl border border-line bg-surface-2 text-ink text-[14.5px] outline-none focus:border-[var(--gold)]">
-              <option>Hinglish</option><option>Hindi</option><option>English</option><option>Marathi</option><option>Gujarati</option><option>Bengali</option>
-            </select>
+            <Select value={language} onChange={e => setLanguage(e.target.value)}>
+              <option>Hindi</option><option>English</option>
+            </Select>
           </div>
           <Button onClick={save} disabled={busy}>{busy ? t('pr_btn_busy') : t('pr_btn_save')}</Button>
         </div>

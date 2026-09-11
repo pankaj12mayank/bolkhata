@@ -15,9 +15,26 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 // PWA + offline sync init
 if ('serviceWorker' in navigator) {
-  // vite-plugin-pwa auto registers, but ensure
+  window.addEventListener('load', async () => {
+    try {
+      if (import.meta.env.PROD) {
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        console.log('SW registered:', registration.scope)
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('New content available, refresh to update')
+            }
+          })
+        })
+      }
+    } catch (e) {
+      console.log('SW registration failed:', e)
+    }
+  })
 }
 initAutoSync()
 
-// expose for debug
 window.BolKhataOffline = true
+window.BolKhataIsOnline = navigator.onLine

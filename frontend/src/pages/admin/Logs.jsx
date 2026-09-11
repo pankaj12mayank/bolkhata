@@ -5,6 +5,7 @@ import { api } from '../../lib/api'
 import Badge from '../../components/Badge'
 import Modal from '../../components/Modal'
 import Button from '../../components/Button'
+import Pagination from '../../components/Pagination'
 import { useToast } from '../../context/ToastContext'
 import { useLang } from '../../context/LangContext'
 
@@ -13,12 +14,14 @@ const filters = [
   { id: 'success', label: 'success' },
   { id: 'failed', label: 'failed' },
 ]
+const PAGE_SIZE = 10
 
 export default function Logs() {
   const [filter, setFilter] = useState('all')
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(new Set())
   const [showConfirm, setShowConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -29,10 +32,11 @@ export default function Logs() {
 
   const load = useCallback(async (f) => {
     setLoading(true)
-    try { setLogs(await api.adminLogs(f)) } finally { setLoading(false) }
+    try { setLogs((await api.adminLogs(f)) || []) } finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { load(filter); setSelected(new Set()) }, [filter, load])
+  useEffect(() => { load(filter); setSelected(new Set()); setPage(1) }, [filter, load])
+  useEffect(() => { setPage(1) }, [search])
 
   const filtered = useMemo(() => {
     if (!search) return logs
@@ -44,14 +48,20 @@ export default function Logs() {
     )
   }, [logs, search])
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const pagedLogs = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, page])
+
   const toggle = (id) => {
     const n = new Set(selected)
     if (n.has(id)) n.delete(id); else n.add(id)
     setSelected(n)
   }
   const toggleAll = () => {
-    if (selected.size === filtered.length) setSelected(new Set())
-    else setSelected(new Set(filtered.map(l=>l.id)))
+    if (selected.size === pagedLogs.length) setSelected(new Set())
+    else setSelected(new Set(pagedLogs.map(l=>l.id)))
   }
   const clearSel = () => setSelected(new Set())
 
@@ -81,7 +91,7 @@ export default function Logs() {
         </div>
       )}
 
-      {/* Filters - horizontal chips with ring */}
+      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
           <Filter size={14} className="text-slate-400 flex-shrink-0" />
@@ -123,14 +133,14 @@ export default function Logs() {
                   <tr className="text-left text-xs font-semibold tracking-widest uppercase text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/40">
                     <th className="p-3 w-10">
                       <button onClick={toggleAll} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
-                        {selected.size===filtered.length && filtered.length>0 ? <CheckSquare size={16} className="text-amber-600" /> : <Square size={16} className="text-slate-400" />}
+                        {selected.size===pagedLogs.length && pagedLogs.length>0 ? <CheckSquare size={16} className="text-amber-600" /> : <Square size={16} className="text-slate-400" />}
                       </button>
                     </th>
                     <th className="p-3">{t('logs_th_shop')}</th><th>{t('logs_th_raw')}</th><th>{t('logs_th_parsed')}</th><th>{t('logs_th_status')}</th><th>{t('logs_th_time')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((l) => (
+                  {pagedLogs.map((l) => (
                     <motion.tr
                       key={l.id}
                       initial={{ opacity: 0 }}
@@ -152,15 +162,18 @@ export default function Logs() {
                 </tbody>
               </table>
             </div>
-            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span>{t('logs_footer', { n: filtered.length, sel: selected.size })}</span>
-              <span className="hidden sm:inline">{t('logs_footer_note')}</span>
-            </div>
+
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+            />
           </>
         )}
       </div>
 
-      {/* Global Theme Modal */}
       <Modal open={showConfirm} onClose={()=>setShowConfirm(false)} title={t('logs_modal_t')} size="md">
         <div className="space-y-4">
           <div className="flex gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900">

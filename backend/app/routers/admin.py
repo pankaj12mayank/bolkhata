@@ -12,6 +12,8 @@ from ..config import settings
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
+DEMO_PHONES = {"9876543210", "9998887771", "9998887772", "9998887773", "9998887774"}
+
 
 @router.get("/profile")
 def admin_profile(_: str = Depends(get_current_admin), db: Session = Depends(get_db)):
@@ -96,9 +98,11 @@ def list_shops(status: str | None = Query(default=None), db: Session = Depends(g
         is_active = getattr(s, 'is_active', 'true') != 'false'
         result.append({
             "id": s.id, "shop_name": s.shop_name, "owner_name": s.owner_name,
+            "phone": s.phone or "",
             "plan_tier": s.plan_tier, "entries_used_this_month": s.entries_used_this_month,
             "status": "Active" if is_active else "Inactive",
             "is_active": is_active,
+            "is_demo": (s.phone or "") in DEMO_PHONES,
             "created_at": s.created_at,
         })
     return result

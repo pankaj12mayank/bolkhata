@@ -16,7 +16,7 @@ from . import models
 
 from .config import settings
 
-from .routers import auth, customers, entries, billing, admin, shop, settings as settings_router, voice, cash, insights, export as export_router, password_reset
+from .routers import auth, customers, entries, billing, admin, shop, settings as settings_router, voice, cash, insights, export as export_router, password_reset, query as query_router
 
 def _migrate_sqlite():
     try:
@@ -198,6 +198,8 @@ app.include_router(export_router.router)
 app.include_router(password_reset.router)
 
 app.include_router(billing.public)
+
+app.include_router(query_router.router)
 
 @app.get("/api/health")
 

@@ -3,19 +3,13 @@ import { Cpu, Mic, MessageCircle, KeyRound, Save } from 'lucide-react'
 import Button from '../../components/Button'
 import Badge from '../../components/Badge'
 import Card from '../../components/Card'
+import Select from '../../components/Select'
 import { useToast } from '../../context/ToastContext'
 import { useLang } from '../../context/LangContext'
 import { api } from '../../lib/api'
 
 import SecretInput from '../../components/SecretInput'
 
-function Toggle({ on, onClick }) {
-  return (
-    <button onClick={onClick} className={`w-11 h-6 rounded-full relative flex-shrink-0 border transition-colors ${on ? 'bg-amber-500 border-amber-500' : 'bg-slate-200 dark:bg-slate-700 border-slate-200 dark:border-slate-700'}`}>
-      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
-    </button>
-  )
-}
 function Field({ label, value, onChange, type="text", placeholder, hint, isSecret=false }) {
   return (
     <div className="mb-3">
@@ -132,9 +126,9 @@ export default function Configuration() {
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('cf_ai_sub')}</p>
         <div className="mb-3">
           <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">{t('cf_provider')}</label>
-          <select value={aiProvider} onChange={e=>handleAiProvider(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm">
+          <Select value={aiProvider} onChange={e=>handleAiProvider(e.target.value)}>
             {AI_PROVIDERS.map(p=> <option key={p.id} value={p.id}>{aiLabel(p.id)}</option>)}
-          </select>
+            </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label={t('cf_base_url')} value={aiBase} onChange={setAiBase} placeholder="https://api.groq.com/openai/v1" />
@@ -152,9 +146,9 @@ export default function Configuration() {
         </div>
         <div className="mb-3">
           <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">{t('cf_provider')}</label>
-          <select value={sttProvider} onChange={e=>setSttProvider(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm">
+          <Select value={sttProvider} onChange={e=>setSttProvider(e.target.value)}>
             {STT_PROVIDERS.map(s=> <option key={s.id} value={s.id}>{sttLabel(s.id)}</option>)}
-          </select>
+            </Select>
         </div>
         {sttProvider!=="browser" && <div className="grid grid-cols-1 sm:grid-cols-3 gap-3"><Field label={t('cf_stt_base')} value={sttBase} onChange={setSttBase} /><Field label={t('cf_model')} value={sttModel} onChange={setSttModel} /><Field label={t('cf_api_key')} value={sttKey} onChange={setSttKey} isSecret /></div>}
         <Button variant="secondary" onClick={()=>test("stt")} disabled={testing==="stt"} className="w-full mt-2">{testing==="stt"?t('cf_saving'):t('cf_test_stt')}</Button>
@@ -165,9 +159,9 @@ export default function Configuration() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">{t('cf_provider')}</label>
-            <select value={waProvider} onChange={e=>setWaProvider(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm">
+            <Select value={waProvider} onChange={e=>setWaProvider(e.target.value)}>
               <option value="wa_me">{t('wa_me')}</option><option value="twilio">{t('wa_twilio')}</option><option value="interakt">{t('wa_interakt')}</option><option value="custom">{t('wa_custom')}</option><option value="disabled">{t('wa_disabled')}</option>
-            </select>
+            </Select>
           </div>
           <Field label={t('cf_base_url')} value={waBase} onChange={setWaBase} />
           <Field label={t('cf_api_key')} value={waKey} onChange={setWaKey} isSecret />
@@ -181,9 +175,9 @@ export default function Configuration() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">{t('cf_provider')}</label>
-            <select value={otpProvider} onChange={e=>setOtpProvider(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm">
+            <Select value={otpProvider} onChange={e=>setOtpProvider(e.target.value)}>
               <option value="dev">{t('otp_dev')}</option><option value="msg91">{t('otp_msg91')}</option><option value="twilio">{t('wa_twilio')}</option><option value="custom">{t('wa_custom')}</option>
-            </select>
+            </Select>
           </div>
           <Field label={t('cf_base_url')} value={otpBase} onChange={setOtpBase} />
           <Field label={t('cf_api_key')} value={otpKey} onChange={setOtpKey} isSecret />

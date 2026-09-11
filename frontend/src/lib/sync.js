@@ -1,14 +1,24 @@
 // Background sync - queue ko online aate hi server se sync
-import { getQueue, removeQueueItem, getCustomers, getEntries } from './offline'
+// Sync ke baad refreshAll() call hota hai taaki IndexedDB clean data se update ho
+import { getQueue, removeQueueItem } from './offline'
+import * as offline from './offline'
 import { api } from './api'
+
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'
 
 let syncing = false
 let listeners = []
+let onSyncComplete = null
 
 export function onSyncStatus(cb) {
   listeners.push(cb)
   return () => { listeners = listeners.filter(x=>x!==cb) }
 }
+
+export function setOnSyncComplete(cb) {
+  onSyncComplete = cb
+}
+
 function emit(status) { listeners.forEach(cb=>cb(status)) }
 
 export async function trySyncAll() {
@@ -19,7 +29,6 @@ export async function trySyncAll() {
   let synced = 0
   try {
     const q = await getQueue()
-    // sort by ts
     q.sort((a,b)=>a.ts-b.ts)
     for (const item of q) {
       try {
@@ -41,28 +50,39 @@ export async function trySyncAll() {
           synced++
         } else if (item.type === 'cash_day') {
           try {
-            await fetch((import.meta.env.VITE_API_BASE||'http://localhost:8000/api') + '/cash/sync', {
+            const token = localStorage.getItem('bolkhata_token') || ''
+            await fetch(API_BASE + '/cash/sync', {
               method: 'POST',
-              headers: { 'Content-Type':'application/json', Authorization: `Bearer ${localStorage.getItem('bolkhata_token')||''}` },
+              headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` },
               body: JSON.stringify(item.payload)
             })
           } catch {}
+          await removeQueueItem(item.qid)
+          synced++
+        } else if (item.type && item.type.startsWith('api_')) {
+          // Generic API action from offline queue - use direct fetch to avoid circular dependency
+          const token = localStorage.getItem('bolkhata_token') || ''
+          const headers = { 'Content-Type': 'application/json' }
+          if (token) headers.Authorization = `Bearer ${token}`
+          const res = await fetch(API_BASE + item.path, {
+            method: item.method || 'POST',
+            headers,
+            body: item.payload !== undefined ? JSON.stringify(item.payload) : undefined,
+          })
+          if (!res.ok) {
+            throw new Error('sync api_' + item.method + ' ' + item.path + ' failed: ' + (await res.text().catch(()=>'')))
+          }
           await removeQueueItem(item.qid)
           synced++
         } else {
           await removeQueueItem(item.qid)
         }
       } catch (e) {
-        // if 402/403/400 permanent, don't retry infinitely - but keep for now
-        // increment tries?
         if (e.message && e.message.includes('Free plan')) {
-          // keep queue but notify
           emit({ error: e.message })
           break
         }
-        // network fail -> stop syncing this round
         if (e.message && (e.message.includes('Failed to fetch') || e.message.includes('Network'))) break
-        // other error -> keep but try next
         console.warn('sync item failed', item, e)
       }
     }
@@ -70,6 +90,9 @@ export async function trySyncAll() {
     syncing = false
     const pending = (await getQueue()).length
     emit({ syncing: false, synced, pending })
+    if (onSyncComplete && synced > 0) {
+      onSyncComplete()
+    }
   }
   return { synced, pending: (await getQueue()).length }
 }
@@ -79,8 +102,28 @@ export function initAutoSync() {
   window.addEventListener('online', () => {
     setTimeout(trySyncAll, 800)
   })
-  // periodic every 30s if online
   setInterval(() => { if (navigator.onLine) trySyncAll() }, 30000)
-  // initial
   if (navigator.onLine) setTimeout(trySyncAll, 1500)
+}
+
+// Refresh offline DB after sync - clears _offline flags and reloads clean data
+export async function refreshAfterSync() {
+  try {
+    const token = localStorage.getItem('bolkhata_token') || ''
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    const [custRes, entryRes] = await Promise.all([
+      fetch(API_BASE + '/customers', { headers }),
+      fetch(API_BASE + '/entries/today', { headers }),
+    ])
+
+    const customers = await custRes.json()
+    const entries = await entryRes.json()
+
+    await offline.saveCustomers(customers || [])
+    if (entries) await offline.saveEntries(entries)
+  } catch (e) {
+    console.warn('refreshAfterSync failed:', e)
+  }
 }

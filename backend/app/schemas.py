@@ -133,6 +133,14 @@ class VoiceParseIn(BaseModel):
     language: Optional[str] = "Hinglish"
 
 
+class VoiceQueryIn(BaseModel):
+    text: str
+    language: Optional[str] = "Hinglish"
+
+class VoiceQueryOut(BaseModel):
+    answer: str
+    type: str  # "text", "error"
+
 class VoiceParseOut(BaseModel):
     customer_name: str
     amount: float

@@ -52,11 +52,13 @@ const hi = {
   role_user_panel: "दुकानदार Panel", role_admin_panel: "Admin Panel",
   // Plans & Payments (admin)
   pl_title: "Plans", pl_sub: "Price, limits aur features edit karein — Landing aur Billing pe live dikhte hain",
-  pl_save: "Save Plans", pl_price: "Price (₹)", pl_limit: "Entries Limit (-1 = unlimited)", pl_tag: "Tag", pl_highlight: "Highlight card", pl_features_en: "Features (English, har line ek)", pl_features_hi: "Features (हिंदी, har line ek)",
+  pl_save: "Save Plans", pl_price: "Price (₹)", pl_limit: "Entries Limit (-1 = unlimited)", pl_tag: "Tag", pl_active: "Landing pe dikhao", pl_highlight: "Highlight card", pl_features_en: "Features (English, har line ek)", pl_features_hi: "Features (हिंदी, har line ek)",
   pay_title: "Payments", pay_sub: "Razorpay gateway connect karein — real payments ke liye",
   pay_key: "Razorpay Gateway", pay_key_id: "Key ID", pay_secret: "Key Secret", pay_webhook_secret: "Webhook Secret", pay_note: "Razorpay dashboard se leke save karein. Test mode on rakh ke test karein.",
   pay_test_mode: "Test Mode", pay_test: "Test Connection", pay_live: "Live", pay_mock: "Mock", pay_webhook_title: "Webhook URL", pay_webhook_note: "Razorpay dashboard me ye URL set karein — signature verify ke liye",
   pay_mode: "Mode", pay_connected: "Connected", pay_yes: "Yes", pay_no: "No", pay_test_mode_note: "Test mode = mock orders, no real money. Off = live.",
+  // Voice Clone (admin XTTS v2)
+  vc_status: "Status", vc_active: "Active", vc_choose_audio: "Choose audio file (WAV/MP3)", vc_clone_voice: "Clone Voice", vc_cloning: "Cloning...", vc_test_voice: "Test Voice", vc_testing: "Testing...", vc_reset_sample: "Reset sample", vc_clear: "Clear",
   // Home
   home_welcome: "नमस्ते", home_sub: "आज का हिसाब",
   home_online: "ऑनलाइन sync सक्रिय", home_offline_queue: "{n} ऑफ़लाइन queue",
@@ -281,6 +283,7 @@ const hi = {
   ov_title: "Admin Overview",
   ov_sub: "Complete health check of the BolKhata platform — live from database.",
   ov_all_ok: "सभी सिस्टम normal",
+  ov_last_sync: "आख़री sync {time}",
   ov_chart_title: "पिछले 7 दिन की activity",
   ov_chart_entries_lbl: "Entries",
   ov_chart_pay_lbl: "Payments",
@@ -603,11 +606,13 @@ const en = {
   role_user_panel: "Shopkeeper Panel", role_admin_panel: "Admin Panel",
   // Plans & Payments (admin)
   pl_title: "Plans", pl_sub: "Edit price, limits & features — shown live on Landing & Billing",
-  pl_save: "Save Plans", pl_price: "Price (₹)", pl_limit: "Entries Limit (-1 = unlimited)", pl_tag: "Tag", pl_highlight: "Highlight card", pl_features_en: "Features (English, one per line)", pl_features_hi: "Features (Hindi, one per line)",
+  pl_save: "Save Plans", pl_price: "Price (₹)", pl_limit: "Entries Limit (-1 = unlimited)", pl_tag: "Tag", pl_active: "Show on landing", pl_highlight: "Highlight card", pl_features_en: "Features (English, one per line)", pl_features_hi: "Features (Hindi, one per line)",
   pay_title: "Payments", pay_sub: "Connect Razorpay gateway — real payments",
   pay_key: "Razorpay Gateway", pay_key_id: "Key ID", pay_secret: "Key Secret", pay_webhook_secret: "Webhook Secret", pay_note: "Get keys from Razorpay dashboard. Keep test mode on while testing.",
   pay_test_mode: "Test Mode", pay_test: "Test Connection", pay_live: "Live", pay_mock: "Mock", pay_webhook_title: "Webhook URL", pay_webhook_note: "Set this URL in the Razorpay dashboard — used to verify signatures",
   pay_mode: "Mode", pay_connected: "Connected", pay_yes: "Yes", pay_no: "No", pay_test_mode_note: "Test mode = mock orders, no real money. Turn off for live.",
+  // Voice Clone (admin XTTS v2)
+  vc_status: "Status", vc_active: "Active", vc_choose_audio: "Choose audio file (WAV/MP3)", vc_clone_voice: "Clone Voice", vc_cloning: "Cloning...", vc_test_voice: "Test Voice", vc_testing: "Testing...", vc_reset_sample: "Reset sample", vc_clear: "Clear",
   home_welcome: "Hello", home_sub: "Today's summary",
   home_online: "Online sync active", home_offline_queue: "{n} offline queue",
   stat_total_out: "Total outstanding", stat_customers: "Total customers", stat_plan: "Plan", stat_reminder: "Due reminders",
@@ -822,6 +827,7 @@ const en = {
   ov_title: "Admin Overview",
   ov_sub: "Complete health check of the BolKhata platform — live from database.",
   ov_all_ok: "All systems normal",
+  ov_last_sync: "Last sync {time}",
   ov_chart_title: "Activity — last 7 days",
   ov_chart_entries_lbl: "Entries",
   ov_chart_pay_lbl: "Payments",

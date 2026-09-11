@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Topbar from '../components/Topbar'
+import AdminVoiceCommand from '../components/AdminVoiceCommand'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { useLang } from '../context/LangContext'
@@ -57,6 +58,8 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+
+      <AdminVoiceCommand />
     </div>
   )
 }

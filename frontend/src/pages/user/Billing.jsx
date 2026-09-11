@@ -206,7 +206,7 @@ export default function Billing() {
               </tr></thead>
               <tbody>
                 {history.map(h => (
-                  <tr key={h.id} className="border-b border-line last:border-0 hover:bg-surface-2">
+                  <tr key={h.id} className="border-b border-line last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="p-3.5 font-bold">{h.amount === standardPrice ? 'Standard' : 'Paid'}</td>
                     <td className="font-mono">₹{Math.round(h.amount)}</td>
                     <td><Badge tone={h.status === 'Success' ? 'green' : h.status === 'Pending' ? 'gold' : 'red'}>{h.status}</Badge></td>

@@ -1,3 +1,5 @@
+import * as offline from './offline'
+
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'
 
 function getToken() {
@@ -8,15 +10,31 @@ export function isOnline() {
   return typeof navigator !== 'undefined' ? navigator.onLine : true
 }
 
+// Read-only POST endpoints — sirf query maangte hain, queue karke sync me dubara replay nahi karna
+const READ_ONLY_POST_PATHS = ['/voice/query']
+
+async function queueOfflineAction(method, path, body) {
+  if (method === 'POST' && READ_ONLY_POST_PATHS.includes(path)) return
+  const actionType = `api_${method.toLowerCase()}_${path.replace(/\//g, '_').replace(/[^a-zA-Z0-9_]/g, '')}`
+  await offline.queueAction({ type: actionType, payload: body, path, method })
+}
+
 export async function apiFetch(path, { method = 'GET', body, auth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   if (auth) {
     const token = getToken()
     if (token) headers.Authorization = `Bearer ${token}`
   }
-  if (!isOnline() && method === 'GET') {
-    throw new Error('OFFLINE')
+
+  if (!isOnline()) {
+    if (method === 'GET') {
+      throw new Error('OFFLINE')
+    }
+    // POST/PUT/DELETE ke liye offline queue mein daalo
+    await queueOfflineAction(method, path, body)
+    throw new Error('OFFLINE_QUEUED')
   }
+
   let res
   try {
     res = await fetch(`${API_BASE}${path}`, {
@@ -26,6 +44,10 @@ export async function apiFetch(path, { method = 'GET', body, auth = true } = {})
     })
   } catch (e) {
     if (!isOnline() || e.message.includes('Failed to fetch') || e.name === 'TypeError') {
+      // Network fail pe bhi queue karo agar POST hai
+      if (['POST','PUT','DELETE'].includes(method)) {
+        await queueOfflineAction(method, path, body)
+      }
       throw new Error('OFFLINE')
     }
     throw e
@@ -142,6 +164,7 @@ export const api = {
   testAi: () => apiFetch('/admin/settings/test/ai', { method: 'POST' }),
   testWhatsapp: () => apiFetch('/admin/settings/test/whatsapp', { method: 'POST' }),
   testOtp: () => apiFetch('/admin/settings/test/otp', { method: 'POST' }),
+
   resetAllData: (payload) => apiFetch('/admin/settings/reset', { method: 'POST', body: payload }),
 }
 

@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import { api } from '../lib/api'
 import * as offline from '../lib/offline'
-import { trySyncAll } from '../lib/sync'
+import { trySyncAll, setOnSyncComplete, refreshAfterSync } from '../lib/sync'
 
 const ShopDataContext = createContext(null)
 
@@ -12,6 +12,7 @@ export function ShopDataProvider({ children }) {
   const [loading, setLoading] = useState(false)
   const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false)
   const [pendingSync, setPendingSync] = useState(0)
+  const refreshAllRef = useRef(null)
 
   useEffect(() => {
     const upd = () => setIsOffline(!navigator.onLine)
@@ -20,6 +21,11 @@ export function ShopDataProvider({ children }) {
     // load pending count
     offline.pendingCount().then(setPendingSync)
     const iv = setInterval(()=> offline.pendingCount().then(setPendingSync), 3000)
+    // After sync completes, refresh data and clear offline queue
+    setOnSyncComplete(async () => {
+      await refreshAfterSync()
+      refreshAllRef.current?.()
+    })
     return () => { window.removeEventListener('online', upd); window.removeEventListener('offline', upd); clearInterval(iv) }
   }, [])
 
@@ -41,14 +47,11 @@ export function ShopDataProvider({ children }) {
         setPlan(p)
         await offline.setMeta('plan', p)
       }
-      // persist to offline
       if (custs) await offline.saveCustomers(custs)
       if (entries) await offline.saveEntries(entries)
-      // try sync queue after refresh
       trySyncAll().then(r=> setPendingSync(r.pending))
     } catch(e){
-      if (e.message === 'OFFLINE' || !navigator.onLine || e.message?.includes('Failed to fetch') || e.message?.includes('Network')) {
-        // load from offline DB
+      if (e.message === 'OFFLINE' || e.message === 'OFFLINE_QUEUED' || !navigator.onLine || e.message?.includes('Failed to fetch') || e.message?.includes('Network')) {
         const [c, en, p] = await Promise.all([offline.getCustomers(), offline.getEntries(), offline.getMeta('plan')])
         if (c && c.length) setCustomers(c)
         if (en) setHomeEntries(en.map(x=>({ name: x.customer_name || x.name, type: x.type, amount: x.amount, time: x.time || new Date(x.created_at||Date.now()).toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'}) })))
@@ -57,11 +60,11 @@ export function ShopDataProvider({ children }) {
         const pend = await offline.pendingCount()
         setPendingSync(pend)
       }
-      // else keep previous data, let caller handle toast
     } finally {
       setLoading(false)
     }
   }, [])
+  refreshAllRef.current = refreshAll
 
   const reset = async () => { setCustomers([]); setHomeEntries([]); setPlan({ tier: 'Free', used: 0, limit: 100, price: 99 }); await offline.wipeOffline().catch(()=>{}) }
 
@@ -103,14 +106,12 @@ export function ShopDataProvider({ children }) {
             const entryLocal = { customer_name: cust.name, amount, type, raw_voice_text: raw, source, created_at: new Date().toISOString() }
             await offline.addEntryLocal(entryLocal)
             setHomeEntries(prev=> [{ name: cust.name, type, amount, time: new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'}) }, ...prev])
-            await offline.queueAction({ type: 'create_entry', payload })
             setPlan(p=>{ const np={...p, used: (p.used||0)+1}; offline.setMeta('plan', np); return np})
             setPendingSync(await offline.pendingCount())
             return { entry: entryLocal, customer: updated, is_new_customer: false, _offline: true }
           }
         }
         // fallback original logic if no id
-        await offline.queueAction({ type: 'create_entry', payload })
         let cust = customers.find(c=> c.name.toLowerCase()===name.toLowerCase())
         // also try partial
         if (!cust) {
@@ -150,10 +151,9 @@ export function ShopDataProvider({ children }) {
       await refreshAll()
       return c
     } catch (e) {
-      if (e.message==='OFFLINE' || e.message.includes('Failed to fetch')) {
+      if (e.message==='OFFLINE' || e.message==='OFFLINE_QUEUED' || e.message.includes('Failed to fetch')) {
         const local = { id: Date.now(), name, phone, balance: balance||0, _offline: true }
         await offline.putCustomerLocal(local)
-        await offline.queueAction({ type: 'create_customer', payload })
         setCustomers(prev=> [...prev, local])
         setPendingSync(await offline.pendingCount())
         return local
@@ -166,14 +166,13 @@ export function ShopDataProvider({ children }) {
       await api.updateCustomer(id, patch)
       await refreshAll()
     } catch (e) {
-      if (e.message==='OFFLINE' || e.message.includes('Failed to fetch')) {
+      if (e.message==='OFFLINE' || e.message==='OFFLINE_QUEUED' || e.message.includes('Failed to fetch')) {
         // local update
         const cust = customers.find(c=>c.id===id)
         if (cust) {
           const upd = { ...cust, ...patch }
           await offline.putCustomerLocal(upd)
           setCustomers(prev=> prev.map(x=> x.id===id? upd: x))
-          await offline.queueAction({ type: 'update_customer', id, payload: patch })
           setPendingSync(await offline.pendingCount())
           return
         }
@@ -186,9 +185,8 @@ export function ShopDataProvider({ children }) {
       await api.deleteCustomer(id)
       await refreshAll()
     } catch (e) {
-      if (e.message==='OFFLINE' || e.message.includes('Failed to fetch')) {
+      if (e.message==='OFFLINE' || e.message==='OFFLINE_QUEUED' || e.message.includes('Failed to fetch')) {
         await offline.deleteCustomerLocal(id)
-        await offline.queueAction({ type: 'delete_customer', id })
         setCustomers(prev=> prev.filter(x=> x.id!==id))
         setPendingSync(await offline.pendingCount())
         return

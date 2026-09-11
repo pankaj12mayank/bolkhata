@@ -11,6 +11,7 @@ DEFAULT_PLANS = [
         "price": 0,
         "entries_limit": 100,
         "highlight": False,
+        "active": True,
         "tag": None,
         "features_en": [
             "100 entries every month",
@@ -31,6 +32,7 @@ DEFAULT_PLANS = [
         "price": 49,
         "entries_limit": 500,
         "highlight": False,
+        "active": True,
         "tag": "starter",
         "features_en": [
             "Everything in Free, plus:",
@@ -53,6 +55,7 @@ DEFAULT_PLANS = [
         "price": 99,
         "entries_limit": None,  # None = unlimited
         "highlight": True,
+        "active": True,
         "tag": "popular",
         "features_en": [
             "Everything in Standard, plus:",
@@ -97,6 +100,7 @@ def _legacy_plan(pid: str, s: models.PlatformSettings) -> dict:
         "price": cfg["price"],
         "entries_limit": cfg["entries_limit"],
         "highlight": cfg["highlight"],
+        "active": True,
         "tag": cfg["tag"],
         "features_en": base.get("features_en", []),
         "features_hi": base.get("features_hi", []),
@@ -119,6 +123,7 @@ def get_plans(s: models.PlatformSettings) -> list[dict]:
                     merged = {**d, **p}
                     merged.setdefault("features_en", d.get("features_en", []))
                     merged.setdefault("features_hi", d.get("features_hi", []))
+                    merged.setdefault("active", True)
                     merged.setdefault("entries_limit", d.get("entries_limit"))
                     out.append(merged)
                 # enforce order free, standard, paid
@@ -149,6 +154,7 @@ def save_plans(db: Session, s: models.PlatformSettings, plans: list[dict]) -> li
             p["entries_limit"] = None
         else:
             p["entries_limit"] = int(entries)
+        p["active"] = bool(p.get("active", True))
         p["highlight"] = bool(p.get("highlight", False))
         p["tag"] = p.get("tag") or None
         p["features_en"] = [str(x).strip() for x in (p.get("features_en") or []) if str(x).strip()]

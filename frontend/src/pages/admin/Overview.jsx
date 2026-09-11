@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { RefreshCw } from 'lucide-react'
 import StatCard from '../../components/StatCard'
 import Badge from '../../components/Badge'
+import Button from '../../components/Button'
 import { api } from '../../lib/api'
 import { initials } from '../../lib/format'
 import { useLang } from '../../context/LangContext'
@@ -45,32 +47,37 @@ export default function Overview() {
   const [chart, setChart] = useState([])
   const [shops, setShops] = useState([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastSync, setLastSync] = useState(null)
   const [error, setError] = useState(null)
   const { t, tl } = useLang()
 
-  useEffect(() => {
-    let alive = true
-    const load = async () => {
-      try {
-        const [ov, sh, ch] = await Promise.all([api.adminOverview(), api.adminShops(), api.adminOverviewChart()])
-        if (!alive) return
-        setStats(ov)
-        setShops(sh)
-        setChart(ch || [])
-      } catch (e) {
-        if (!alive) return
-        setError(tl(e.message) || t('common_load_fail'))
-      } finally {
-        if (alive) setLoading(false)
-      }
+  const load = useCallback(async (silent = false) => {
+    if (silent) setRefreshing(true)
+    else setLoading(true)
+    try {
+      const [ov, sh, ch] = await Promise.all([api.adminOverview(), api.adminShops(), api.adminOverviewChart()])
+      setStats(ov)
+      setShops(sh)
+      setChart(ch || [])
+      setError(null)
+      setLastSync(new Date())
+    } catch (e) {
+      setError(tl(e.message) || t('common_load_fail'))
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
-    load()
-    const id = setInterval(load, 45000)
-    return () => { alive = false; clearInterval(id) }
   }, [t, tl])
 
+  useEffect(() => {
+    load()
+    const id = setInterval(() => load(true), 30000)
+    return () => clearInterval(id)
+  }, [load])
+
   if (loading) return <div className="text-ink-dim py-16 text-center">{t('common_loading')}</div>
-  if (error) return <div className="text-maroon py-16 text-center">{t('common_load_fail')} — {error}</div>
+  if (error && !stats) return <div className="text-maroon py-16 text-center">{t('common_load_fail')} — {error}</div>
 
   const statCards = [
     { value: stats.total_shops, label: t('ov_stat_total'), icon: <Icon d={<><path d="M4 10l1-6h14l1 6" /><path d="M5 10v9h14v-9" /></>} /> },
@@ -83,8 +90,17 @@ export default function Overview() {
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-end gap-2 mb-6">
-        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="hidden sm:inline text-[11px] font-mono text-ink-dim flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)] animate-pulse" />auto-refresh</motion.span>
+      <div className="flex items-center justify-end gap-2 mb-6 flex-wrap">
+        {lastSync && (
+          <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="hidden sm:inline text-[11px] font-mono text-ink-dim flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)] animate-pulse" />
+            {t('ov_last_sync', { time: lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) })}
+          </motion.span>
+        )}
+        <Button variant="secondary" size="sm" onClick={() => load(true)} disabled={refreshing} className="!gap-1.5 text-xs">
+          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+          {refreshing ? t('syncing') : t('sync_now')}
+        </Button>
         <Badge tone="green"><span className="inline-block w-2 h-2 rounded-full bg-green animate-pulse mr-1.5" />{t('ov_all_ok')}</Badge>
       </div>
 

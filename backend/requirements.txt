@@ -10,3 +10,11 @@ psycopg2-binary==2.9.9
 openai==1.40.0
 anthropic==0.34.0
 httpx==0.27.0
+aiofiles==23.2.1
+# For CSV export
+csv23==0.8.7
+# For background task scheduling
+apscheduler==3.10.4
+# For additional utilities
+bloomfilter2==1.0.0
+pydantic-settings==2.0.3

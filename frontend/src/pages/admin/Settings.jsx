@@ -15,6 +15,8 @@ import {
 import Badge from '../../components/Badge'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
+import Toggle from '../../components/Toggle'
+import Select from '../../components/Select'
 import { useToast } from '../../context/ToastContext'
 import { useLang } from '../../context/LangContext'
 import { api } from '../../lib/api'
@@ -33,21 +35,7 @@ function ToggleRow({ title, description, icon: Icon, on, onClick }) {
           {description && <div className="text-xs text-ink-dim mt-0.5 leading-snug">{description}</div>}
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onClick}
-        className={`w-12 h-6.5 rounded-full relative flex-shrink-0 border transition-all duration-200 ${
-          on
-            ? 'bg-amber-500 border-amber-500 shadow-sm'
-            : 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600'
-        }`}
-      >
-        <div
-          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${
-            on ? 'translate-x-6' : 'translate-x-0.5'
-          }`}
-        />
-      </button>
+      <Toggle on={on} onClick={onClick} />
     </div>
   )
 }
@@ -73,7 +61,7 @@ export default function Settings() {
   const [limit, setLimit] = useState(100)
   const [price, setPrice] = useState(99)
   const [paidLimit, setPaidLimit] = useState(-1)
-  const [defaultLang, setDefaultLang] = useState('Hinglish')
+  const [defaultLang, setDefaultLang] = useState('Hindi')
   const [waTemplate, setWaTemplate] = useState('')
   const [autoReminder, setAutoReminder] = useState(true)
   const [autoReminderDay, setAutoReminderDay] = useState('mon')
@@ -88,7 +76,7 @@ export default function Settings() {
       setLimit(s.free_entries_limit ?? 100)
       setPrice(s.paid_price_inr ?? 99)
       setPaidLimit(s.paid_entries_limit ?? -1)
-      setDefaultLang(s.default_language || 'Hinglish')
+      setDefaultLang(s.default_language || 'Hindi')
       setWaTemplate(s.wa_template || '')
       setAutoReminder(s.auto_reminder === 'true')
       setAutoReminderDay(s.auto_reminder_day || 'mon')
@@ -152,7 +140,7 @@ export default function Settings() {
     <div className="w-full">
       <div className="flex items-center justify-end gap-2 mb-6">
         <Button onClick={save} disabled={saving} className="justify-center">
-          <Save size={16} /> {saving ? t('sv_saving') : t('sv_save')}
+          {saving ? t('sv_saving') : t('sv_save')}
         </Button>
       </div>
 
@@ -187,18 +175,10 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label={t('sv_default_lang')}>
-              <select
-                value={defaultLang}
-                onChange={(e) => setDefaultLang(e.target.value)}
-                className="w-full px-3.5 py-3 rounded-xl border border-line bg-surface-2 text-ink text-[14.5px] outline-none focus:border-[var(--gold)]"
-              >
-                <option>Hinglish</option>
+              <Select value={defaultLang} onChange={(e) => setDefaultLang(e.target.value)}>
                 <option>Hindi</option>
                 <option>English</option>
-                <option>Marathi</option>
-                <option>Gujarati</option>
-                <option>Bengali</option>
-              </select>
+              </Select>
             </Field>
 
             <Field label={t('sv_jwt')} hint={t('sv_jwt_hint')}>
@@ -233,11 +213,7 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <Field label={t('sv_rem_day')}>
-              <select
-                value={autoReminderDay}
-                onChange={(e) => setAutoReminderDay(e.target.value)}
-                className="w-full px-3.5 py-3 rounded-xl border border-line bg-surface-2 text-ink text-[14.5px] outline-none focus:border-[var(--gold)]"
-              >
+              <Select value={autoReminderDay} onChange={(e) => setAutoReminderDay(e.target.value)}>
                 <option value="mon">{t('rem_day_mon')}</option>
                 <option value="tue">{t('rem_day_tue')}</option>
                 <option value="wed">{t('rem_day_wed')}</option>
@@ -245,7 +221,7 @@ export default function Settings() {
                 <option value="fri">{t('rem_day_fri')}</option>
                 <option value="sat">{t('rem_day_sat')}</option>
                 <option value="sun">{t('rem_day_sun')}</option>
-              </select>
+              </Select>
             </Field>
 
             <Field label={t('sv_rem_time')}>

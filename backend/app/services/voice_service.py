@@ -19,7 +19,7 @@ async def transcribe_with_whisper(file_bytes: bytes, filename: str, api_key: str
         else:
             url = "https://api.openai.com/v1/audio/transcriptions"
         headers = {"Authorization": f"Bearer {api_key}"}
-        lang_map = {"Hindi": "hi", "Hinglish": "hi", "Marathi": "mr", "English": "en"}
+        lang_map = {"Hindi": "hi", "English": "en", "hi": "hi", "en": "en"}
         lang_code = lang_map.get(language_hint, "hi")
         data = {"model": model}
         if language_hint == "Hinglish":

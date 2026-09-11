@@ -231,44 +231,51 @@ export default function Landing() {
             <div className="text-xs font-semibold tracking-widest uppercase text-amber-600 dark:text-amber-400 mb-2">{t('land_pricing_badge')}</div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{t('pricing_title')}</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
-            {[
-              {
-                id: 'free', name: 'Free', note: 'price_note', cta: 'price_cta_free',
-                defaultFeaturesHi: ["हर महीने 100 एंट्री तक", "मैन्युअल व वॉइस उधार एंट्री", "ग्राहक व बाकी की बही", "व्हाट्सऐप payment रिमाइंडर (wa.me)"],
-                defaultFeaturesEn: ["100 entries every month", "Manual & voice udhaar entry", "Customers & baaki ledger", "WhatsApp payment reminders (wa.me)"]
-              },
-              {
-                id: 'standard', name: 'Standard', note: 'price_note', tag: 'price_tag_starter', cta: 'price_cta_std',
-                defaultFeaturesHi: ["Free के सब कुछ, plus:", "हर महीने 500 एंट्री", "अनलिमिटेड ग्राहक व पुरानी बही", "बही व एंट्री का CSV निर्यात (export)", "शेड्यूल्ड auto WhatsApp रिमाइंडर"],
-                defaultFeaturesEn: ["Everything in Free, plus:", "500 entries every month", "Unlimited customers & old ledger", "CSV export of ledger & entries", "Scheduled auto WhatsApp reminders"]
-              },
-              {
-                id: 'paid', name: 'Paid', note: 'price_note', tag: 'price_tag_popular', cta: 'price_cta_paid',
-                defaultFeaturesHi: ["Standard के सब कुछ, plus:", "अनलिमिटेड एंट्री", "रिमाइंडर में UPI payment लिंक", "Priority सपोर्ट", "आने वाले Pro फीचर का access"],
-                defaultFeaturesEn: ["Everything in Standard, plus:", "Unlimited entries", "UPI payment links in reminders", "Priority support", "Access to upcoming pro features"]
-              },
-            ].map((p,i)=> {
-              const live = planMap[p.id]
-              const price = live?.price ?? (p.id==='free'?0:p.id==='standard'?49:99)
-              const features = (lang === 'hi' ? (live?.features_hi || live?.features) : (live?.features_en || live?.features)) ||
-                (lang === 'hi' ? p.defaultFeaturesHi : p.defaultFeaturesEn) || []
+          {(() => {
+              const allPlans = [
+                {
+                  id: 'free', name: 'Free', note: 'price_note', cta: 'price_cta_free',
+                  defaultFeaturesHi: ["हर महीने 100 एंट्री तक", "मैन्युअल व वॉइस उधार एंट्री", "ग्राहक व बाकी की बही", "व्हाट्सऐप payment रिमाइंडर (wa.me)"],
+                  defaultFeaturesEn: ["100 entries every month", "Manual & voice udhaar entry", "Customers & baaki ledger", "WhatsApp payment reminders (wa.me)"]
+                },
+                {
+                  id: 'standard', name: 'Standard', note: 'price_note', tag: 'price_tag_starter', cta: 'price_cta_std',
+                  defaultFeaturesHi: ["Free के सब कुछ, plus:", "हर महीने 500 एंट्री", "अनलिमिटेड ग्राहक व पुरानी बही", "बही व एंट्री का CSV निर्यात (export)", "शेड्यूल्ड auto WhatsApp रिमाइंडर"],
+                  defaultFeaturesEn: ["Everything in Free, plus:", "500 entries every month", "Unlimited customers & old ledger", "CSV export of ledger & entries", "Scheduled auto WhatsApp reminders"]
+                },
+                {
+                  id: 'paid', name: 'Paid', note: 'price_note', tag: 'price_tag_popular', cta: 'price_cta_paid',
+                  defaultFeaturesHi: ["Standard के सब कुछ, plus:", "अनलिमिटेड एंट्री", "रिमाइंडर में UPI payment लिंक", "Priority सपोर्ट", "आने वाले Pro फीचर का access"],
+                  defaultFeaturesEn: ["Everything in Standard, plus:", "Unlimited entries", "UPI payment links in reminders", "Priority support", "Access to upcoming pro features"]
+                },
+              ]
+              const plans = allPlans.filter(p => (planMap[p.id] ?? p).active !== false)
+              const gridCols = plans.length <= 1 ? 'md:grid-cols-1' : plans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'
               return (
-              <TiltCard key={i} className="h-full">
-                <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i*0.08 }} whileHover={{ y: -6 }} className={`relative h-full rounded-3xl border p-6 sm:p-7 flex flex-col bg-white dark:bg-slate-900 ${live?.highlight ? 'border-amber-500/70 shadow-[0_25px_60px_-18px_rgba(245,158,11,0.45)] ring-1 ring-amber-500' : 'border-slate-200 dark:border-slate-700 shadow-soft'}`}>
-                  {live?.highlight && <div className="absolute -inset-px rounded-3xl bg-gradient-to-br from-amber-500/30 via-transparent to-amber-500/10 -z-0 pointer-events-none" />}
-                  {(live?.tag || p.tag) && <div className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-bold shadow-medium">{t(live?.tag || p.tag)}</div>}
-                  <div className="text-xs font-semibold tracking-widest uppercase text-slate-500 dark:text-slate-400">{live?.name || p.name}</div>
-                  <div className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white">₹{price}<span className="text-sm font-medium text-slate-500 dark:text-slate-400 ml-0.5">{t(p.note)}</span></div>
-                  <ul className="mt-6 space-y-2.5 flex-1">
-                    {features.map((f,j)=> <li key={j} className="flex gap-2 text-sm text-slate-600 dark:text-slate-300"><span className="mt-0.5 w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center flex-shrink-0"><Check size={13} className="text-amber-600 dark:text-amber-400" /></span>{f}</li>)}
-                  </ul>
-                  <Link to="/login/dukaandaar" className="block mt-7"><Button variant={live?.highlight ? 'primary' : 'secondary'} className="w-full justify-center">{t(p.cta)}</Button></Link>
-                </motion.div>
-              </TiltCard>
+              <div className={`grid ${gridCols} gap-6 lg:gap-8 max-w-5xl mx-auto`}>
+                {plans.map((p,i) => {
+                  const live = planMap[p.id]
+                  const price = live?.price ?? (p.id==='free'?0:p.id==='standard'?49:99)
+                  const features = (lang === 'hi' ? (live?.features_hi || live?.features) : (live?.features_en || live?.features)) ||
+                    (lang === 'hi' ? p.defaultFeaturesHi : p.defaultFeaturesEn) || []
+                  return (
+                  <TiltCard key={i} className="h-full">
+                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i*0.08 }} whileHover={{ y: -6 }} className={`relative h-full rounded-3xl border p-6 sm:p-7 flex flex-col bg-white dark:bg-slate-900 ${live?.highlight ? 'border-amber-500/70 shadow-[0_25px_60px_-18px_rgba(245,158,11,0.45)] ring-1 ring-amber-500' : 'border-slate-200 dark:border-slate-700 shadow-soft'}`}>
+                      {live?.highlight && <div className="absolute -inset-px rounded-3xl bg-gradient-to-br from-amber-500/30 via-transparent to-amber-500/10 -z-0 pointer-events-none" />}
+                      {(live?.tag || p.tag) && <div className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-bold shadow-medium">{t(live?.tag || p.tag)}</div>}
+                      <div className="text-xs font-semibold tracking-widest uppercase text-slate-500 dark:text-slate-400">{live?.name || p.name}</div>
+                      <div className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white">₹{price}<span className="text-sm font-medium text-slate-500 dark:text-slate-400 ml-0.5">{t(p.note)}</span></div>
+                      <ul className="mt-6 space-y-2.5 flex-1">
+                        {features.map((f,j)=> <li key={j} className="flex gap-2 text-sm text-slate-600 dark:text-slate-300"><span className="mt-0.5 w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center flex-shrink-0"><Check size={13} className="text-amber-600 dark:text-amber-400" /></span>{f}</li>)}
+                      </ul>
+                      <Link to="/login/dukaandaar" className="block mt-7"><Button variant={live?.highlight ? 'primary' : 'secondary'} className="w-full justify-center">{t(p.cta)}</Button></Link>
+                    </motion.div>
+                  </TiltCard>
+                  )
+                })}
+              </div>
               )
-            })}
-          </div>
+            })()}
         </div>
       </section>
 

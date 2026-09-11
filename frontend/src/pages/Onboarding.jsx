@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import Button from '../components/Button'
+import Select from '../components/Select'
 import { useAuth } from '../context/AuthContext'
 import { useShopData } from '../context/ShopDataContext'
 import { useToast } from '../context/ToastContext'
@@ -67,10 +68,9 @@ export default function Onboarding() {
         </div>
         <div className="mb-5">
           <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">{t('ob_lbl_lang')}</label>
-          <select value={language} onChange={e => setLanguage(e.target.value)}
-            className="w-full px-3.5 py-3 rounded-xl border border-line bg-surface-2 text-ink text-[14.5px] outline-none focus:border-[var(--gold)]">
-            <option>Hindi</option><option>Hinglish</option><option>Marathi</option><option>English</option>
-          </select>
+          <Select value={language} onChange={e => setLanguage(e.target.value)}>
+            <option>Hindi</option><option>English</option>
+          </Select>
         </div>
         <Button onClick={submit} disabled={busy} className="w-full">{busy ? t('ob_busy') : t('ob_btn')}</Button>
       </div>

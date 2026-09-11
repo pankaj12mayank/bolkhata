@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext"
 import { useToast } from "../../context/ToastContext"
 import Button from "../../components/Button"
 import AILoader from "../../components/AILoader"
+import Select from "../../components/Select"
 import { api } from "../../lib/api"
 import { localParse, findCandidates } from "../../lib/parse"
 import { fmt } from "../../lib/format"
@@ -31,7 +32,7 @@ export default function NewEntry() {
   const [manualAmount, setManualAmount] = useState("")
   const [manualType, setManualType] = useState("credit_given")
   const [busy, setBusy] = useState(false)
-  const [lang, setLang] = useState(shopProfile?.language || "Hinglish")
+  const [lang, setLang] = useState(shopProfile?.language || "Hindi")
   const [useRealMic, setUseRealMic] = useState(true)
   const [sttProgress, setSttProgress] = useState(null) // {pct, msg, source}
   const [localReady, setLocalReady] = useState(false)
@@ -331,9 +332,9 @@ export default function NewEntry() {
   return (
     <div className="w-full">
       <div className="mb-6 flex justify-end">
-        <select value={lang} onChange={e=>setLang(e.target.value)} className="w-full sm:w-auto px-3 py-2.5 rounded-xl border border-line bg-surface text-sm">
+        <Select value={lang} onChange={e=>setLang(e.target.value)} className="w-full sm:w-auto">
           <option>Hinglish</option><option>Hindi</option><option>English</option><option>Marathi</option><option>Gujarati</option><option>Bengali</option>
-        </select>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">

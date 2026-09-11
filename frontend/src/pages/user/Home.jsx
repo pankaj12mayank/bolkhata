@@ -1,72 +1,41 @@
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
-import { Wallet, Users, Mic, Bell, ArrowRight } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Mic, ArrowRight, Wallet, Users, Bell } from 'lucide-react'
+import Card from '../../components/Card'
+import Button from '../../components/Button'
+import Badge from '../../components/Badge'
+import Pagination from '../../components/Pagination'
 import { useAuth } from '../../context/AuthContext'
 import { useShopData } from '../../context/ShopDataContext'
 import { fmt, initials } from '../../lib/format'
-import Badge from '../../components/Badge'
-import Button from '../../components/Button'
-import Card from '../../components/Card'
-import { SkeletonCard } from '../../components/Skeleton'
 import { api } from '../../lib/api'
 import { useLang } from '../../context/LangContext'
 
-function useCountUp(target, duration = 700) {
-  const [val, setVal] = useState(0)
-  const prev = useRef(0)
-  useEffect(() => {
-    if (typeof target !== 'number') { setVal(target ?? 0); return }
-    const from = prev.current
-    prev.current = target
-    let raf
-    const start = performance.now()
-    const step = (now) => {
-      const p = Math.min(1, (now - start) / duration)
-      setVal(Math.round(from + (target - from) * (1 - Math.pow(1 - p, 3))))
-      if (p < 1) raf = requestAnimationFrame(step)
-    }
-    raf = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(raf)
-  }, [target, duration])
-  return val
-}
-
 function Stat({ icon: Icon, value, label, accent }) {
-  const ref = useRef(null)
-  const inView = useInView(ref, { once: true })
-  const n = useCountUp(typeof value === 'number' && inView ? value : (typeof value === 'string' ? value : 0))
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 14, rotateX: 18 }}
-      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-      whileHover={{ y: -4, rotateX: 3, rotateY: -3 }}
-      style={{ perspective: 700 }}
-      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-soft hover:shadow-medium transition-shadow relative overflow-hidden"
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
-          <Icon size={16} />
-        </div>
-        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${accent}`}>live</span>
+    <motion.div whileHover={{ y: -2 }} className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-soft">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold tracking-widest uppercase text-slate-500 dark:text-slate-400">{label}</span>
+        <div className={`p-2 rounded-xl ${accent}`}><Icon size={18} /></div>
       </div>
-      <div className="text-2xl font-bold tracking-tight">
-        {typeof value === 'number' ? n.toLocaleString('en-IN') : value}
-      </div>
-      <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
-      <div className="absolute -bottom-6 -right-6 w-16 h-16 rounded-full bg-amber-400/10 blur-xl" />
+      <div className="mt-3 font-mono text-2xl font-bold tracking-tight">{value}</div>
     </motion.div>
   )
 }
 
+function SkeletonCard() {
+  return <div className="h-28 rounded-2xl bg-slate-100 dark:bg-slate-800/60 animate-pulse" />
+}
+
 function WeekChart({ data }) {
   const { t } = useLang()
-  if (!data || data.length === 0) return <div className="text-slate-500 py-8 text-center text-sm">{t('common_loading')}</div>
-  const max = Math.max(...data.map(d => Math.max(d.given, d.received)), 1)
-  const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+  if (!data || data.length === 0) return null
+  const max = Math.max(...data.map(d => Math.max(d.given, d.received)), 100)
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
   return (
-    <div className="flex items-end gap-2 sm:gap-3 h-36 pt-2">
+    <div className="h-44 flex items-end justify-between gap-2 pt-4 px-2">
       {data.map((d, i) => (
         <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
           <div className="flex items-end justify-center gap-1 flex-1 w-full">
@@ -92,6 +61,8 @@ function WeekChart({ data }) {
   )
 }
 
+const PAGE_SIZE = 5
+
 export default function Home() {
   const { shopProfile } = useAuth()
   const { customers, homeEntries, plan, isOffline, pendingSync, loading } = useShopData()
@@ -99,9 +70,10 @@ export default function Home() {
   const navigate = useNavigate()
   const sorted = [...customers].sort((a, b) => b.balance - a.balance)
   const totalOut = customers.reduce((s, c) => s + c.balance, 0)
-  const firstName = shopProfile?.ownerName?.split(' ')?.[0] || 'Dukaandaar'
   const [insight, setInsight] = useState(null)
   const [daily, setDaily] = useState([])
+  const [page, setPage] = useState(1)
+
   useEffect(()=>{
     let alive = true
     const load = () => {
@@ -112,6 +84,12 @@ export default function Home() {
     const id = setInterval(load, 30000)
     return () => { alive = false; clearInterval(id) }
   },[customers.length])
+
+  const totalPages = Math.ceil((homeEntries || []).length / PAGE_SIZE)
+  const pagedEntries = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return (homeEntries || []).slice(start, start + PAGE_SIZE)
+  }, [homeEntries, page])
 
   if (loading && customers.length===0) {
     return <div className="grid grid-cols-1 md:grid-cols-3 gap-4">{[1,2,3].map(i=> <SkeletonCard key={i} />)}</div>
@@ -180,21 +158,30 @@ export default function Home() {
               <p className="text-sm text-slate-500">{t('home_empty_hint')}</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="text-left text-xs font-semibold tracking-widest uppercase text-slate-400 border-b border-slate-100 dark:border-slate-800"><th className="px-5 py-3">{t('th_customer')}</th><th className="px-3 py-3">{t('th_type')}</th><th className="px-3 py-3">{t('th_amount')}</th><th className="px-3 py-3">{t('th_time')}</th></tr></thead>
-                <tbody>
-                  {homeEntries.map((e,i)=> (
-                    <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i*0.03 }} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/60">
-                      <td className="px-5 py-3 font-medium">{e.name}</td>
-                      <td className="px-3 py-3"><Badge tone={e.type==='credit_given'?'red':'green'}>{e.type==='credit_given'?t('badge_udhaar'):t('badge_wapas')}</Badge></td>
-                      <td className="px-3 py-3 font-mono font-semibold">{fmt(e.amount)}</td>
-                      <td className="px-3 py-3 font-mono text-xs text-slate-500">{e.time}</td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="text-left text-xs font-semibold tracking-widest uppercase text-slate-400 border-b border-slate-100 dark:border-slate-800"><th className="px-5 py-3">{t('th_customer')}</th><th className="px-3 py-3">{t('th_type')}</th><th className="px-3 py-3">{t('th_amount')}</th><th className="px-3 py-3">{t('th_time')}</th></tr></thead>
+                  <tbody>
+                    {pagedEntries.map((e,i)=> (
+                      <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i*0.03 }} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/60">
+                        <td className="px-5 py-3 font-medium">{e.name}</td>
+                        <td className="px-3 py-3"><Badge tone={e.type==='credit_given'?'red':'green'}>{e.type==='credit_given'?t('badge_udhaar'):t('badge_wapas')}</Badge></td>
+                        <td className="px-3 py-3 font-mono font-semibold">{fmt(e.amount)}</td>
+                        <td className="px-3 py-3 font-mono text-xs text-slate-500">{e.time}</td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                totalItems={homeEntries.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPage}
+              />
+            </>
           )}
         </Card>
 

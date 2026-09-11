@@ -3,34 +3,17 @@ import { Save, RotateCcw, TestTube2, Check, Copy } from 'lucide-react'
 import Button from '../../components/Button'
 import Badge from '../../components/Badge'
 import SecretInput from '../../components/SecretInput'
+import Toggle from '../../components/Toggle'
 import { useToast } from '../../context/ToastContext'
 import { useLang } from '../../context/LangContext'
 import { api } from '../../lib/api'
-
-function Toggle({ on, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-11 h-6 rounded-full relative flex-shrink-0 border transition-colors ${
-        on ? 'bg-[rgba(79,163,122,.2)] border-green' : 'bg-surface-2 border-line'
-      }`}
-    >
-      <div
-        className={`absolute top-0.5 w-[18px] h-[18px] rounded-full transition-transform ${
-          on ? 'translate-x-5 bg-green' : 'translate-x-0.5 bg-ink-dim'
-        }`}
-      />
-    </button>
-  )
-}
 
 function Field({ label, hint, children }) {
   return (
     <div className="mb-4">
       <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">{label}</label>
       {children}
-      {hint && <p className="text-[11px] text-ink-dim mt-1">{hint}</p>}
+      {hint && <p className="text-[12px] text-ink-dim mt-1">{hint}</p>}
     </div>
   )
 }

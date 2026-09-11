@@ -2,34 +2,17 @@ import { useEffect, useState } from 'react'
 import { Save, RotateCcw, Sparkles } from 'lucide-react'
 import Button from '../../components/Button'
 import Badge from '../../components/Badge'
+import Toggle from '../../components/Toggle'
 import { useToast } from '../../context/ToastContext'
 import { useLang } from '../../context/LangContext'
 import { api } from '../../lib/api'
-
-function Toggle({ on, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-11 h-6 rounded-full relative flex-shrink-0 border transition-colors ${
-        on ? 'bg-[rgba(79,163,122,.2)] border-green' : 'bg-surface-2 border-line'
-      }`}
-    >
-      <div
-        className={`absolute top-0.5 w-[18px] h-[18px] rounded-full transition-transform ${
-          on ? 'translate-x-5 bg-green' : 'translate-x-0.5 bg-ink-dim'
-        }`}
-      />
-    </button>
-  )
-}
 
 function Field({ label, hint, children }) {
   return (
     <div className="mb-4">
       <label className="block text-[12.5px] font-bold text-ink-dim mb-1.5">{label}</label>
       {children}
-      {hint && <p className="text-[11px] text-ink-dim mt-1">{hint}</p>}
+      {hint && <p className="text-[12px] text-ink-dim mt-1">{hint}</p>}
     </div>
   )
 }
@@ -104,10 +87,17 @@ export default function Plans() {
                   className="font-display font-bold text-2xl bg-surface-2 border border-line focus:border-[var(--gold)] text-ink outline-none px-3 py-1.5 rounded-xl shadow-xs"
                 />
                 {p.highlight && <Badge tone="gold"><Sparkles size={12} className="inline mr-1" /> Featured</Badge>}
+                {p.active === false && <span className="text-[11px] font-bold text-red bg-red/10 px-2 py-0.5 rounded-md">Inactive</span>}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[12.5px] font-bold text-ink-dim">{t('pl_highlight')}</span>
-                <Toggle on={p.highlight} onClick={() => update(i, 'highlight', !p.highlight)} />
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-[12.5px] font-bold text-ink-dim">{t('pl_active')}</span>
+                  <Toggle on={p.active !== false} onClick={() => update(i, 'active', !p.active)} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[12.5px] font-bold text-ink-dim">{t('pl_highlight')}</span>
+                  <Toggle on={p.highlight} onClick={() => update(i, 'highlight', !p.highlight)} />
+                </div>
               </div>
             </div>
 
