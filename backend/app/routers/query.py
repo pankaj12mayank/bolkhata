@@ -64,6 +64,13 @@ def _shop_totals(shop, db):
     return total_given, total_received, total_balance, entry_count, cust_count
 
 
+def is_english(lang_str: str) -> bool:
+    if not lang_str:
+        return False
+    l = str(lang_str).lower()
+    return 'en' in l or 'english' in l
+
+
 @router.post("/query", response_model=schemas.VoiceQueryOut)
 def voice_query(
     payload: schemas.VoiceQueryIn,
@@ -74,145 +81,166 @@ def voice_query(
     if not text:
         raise HTTPException(status_code=400, detail="Query khali hai")
 
-    lang = payload.language or "Hinglish"
-    answer = _process_query(text, shop, db)
+    lang = payload.language or shop.language or "Hindi"
+    answer = _process_query(text, shop, db, lang)
     return {"answer": answer, "type": "text"}
 
 
-def _process_query(text: str, shop: models.Shop, db: Session) -> str:
+def _process_query(text: str, shop: models.Shop, db: Session, lang: str = "Hindi") -> str:
     t = text.lower().strip()
+    use_en = is_english(lang)
 
-    # --- Total / Sum queries ---
-    if any(kw in t for kw in ['total', 'kitna hua', 'kitna bacha', 'kamaata', 'kamat', 'kharche', 'kharab', 'total income', 'total expense', 'kharida', 'debit', 'credit', 'deduction']):
-        return _handle_total(shop, db)
-
-    # --- Customer count ---
-    if any(kw in t for kw in ['kitne user', 'kitne customer', 'kitne guest', 'customer kitne', 'user kitne', 'customers', 'total customer', 'how many', 'kitne']):
-        return _handle_customer_count(shop, db)
-
-    # --- User / Customer details ---
-    if any(kw in t for kw in ['user ka detail', 'customer ka detail', 'customer detail', 'user detail', 'customer info', 'user info', 'user ka naam', 'customer ka naam', 'kaunse customer', 'kaunse user', 'customer list', 'user list', 'customers list', 'users list', 'sabka detail', 'sabka naam']):
-        return _handle_customer_list(shop, db)
-
-    # --- Specific customer query ---
-    if any(kw in t for kw in ['ka balance', 'ka udhaar', 'ka kharab', 'kitna bacha', 'ka kamaata', 'ka kharida']):
-        return _handle_specific_customer(t, shop, db)
-
-    # --- Balance query ---
-    if any(kw in t for kw in ['balance', 'baki', 'baccha', 'remain', 'bachega', 'mera balance']):
-        return _handle_balance(shop, db)
-
-    # --- Total sales/revenue ---
-    if any(kw in t for kw in ['sales', 'revenue', 'income', 'gross']):
-        return _handle_revenue(shop, db)
-
-    # --- Entry / hisaab / deduction detail (date, din, samay ke saath) ---
-    if any(kw in t for kw in ['entry', 'entries', 'entry count', 'kitne entry', 'transactions', 'kitne record', 'saare record', 'hisaab', 'hisab', 'kharab', 'kharch', 'kaam', 'log']):
-        return _handle_entry_detail(shop, db)
-
-    # --- Greeting ---
-    if any(kw in t for kw in ['hello', 'hi', 'namaste', 'hii', 'salam', 'good morning', 'good evening']):
-        shop_name = shop.shop_name or 'Dukaandaar'
-        return f"Namaste {shop_name}! Main BolKhata hun. Tum koi bhi sawaal poochho — Total, Balance, Hisaab, Entry — date aur time ke saath pura data bata dunga!"
-
-    # --- Help ---
-    if any(kw in t for kw in ['help', 'help me', 'kaunse sawal', 'pooch sakte ho', 'kya pooch sakte']):
-        return "Bol sakte ho: 'Total kitna hua', 'Kitne user hain', 'User ka detail', 'Balance batao', 'Hisaab batao', 'Entry ka detail'. Ye sab date aur time ke saath mil jayega!"
-
-    # --- Default: full shop summary (koi bhi sawaal → pura data) ---
-    return _handle_full_summary(shop, db)
-
-
-def _handle_full_summary(shop: models.Shop, db: Session) -> str:
-    total_given, total_received, total_balance, entry_count, count = _shop_totals(shop, db)
+    # 1. Direct Customer Name Matching (Match any registered customer name)
     customers = db.query(models.Customer).filter(models.Customer.shop_id == shop.id).all()
-    detail = "Customers: " + (", ".join(f"{c.name} Rs {c.balance:,.0f}" for c in customers[:8]) if customers else "koi nahi")
-    if len(customers) > 8:
-        detail += f" aur {len(customers) - 8} aur."
-
-    recent = db.query(models.Entry).filter(models.Entry.shop_id == shop.id).order_by(models.Entry.created_at.desc()).limit(3).all()
-    recent_s = ""
-    if recent:
-        parts = []
-        for e in recent:
-            ename = e.customer.name if e.customer else ("'" + (e.raw_voice_text or "") + "'")
-            if e.parse_status == "failed":
-                parts.append(f"'{e.raw_voice_text}' samajh nahi aaya ({_when(e.created_at)})")
+    for c in customers:
+        name_parts = [p.lower() for p in c.name.split() if len(p) >= 2]
+        if c.name.lower() in t or any(part in t for part in name_parts):
+            last = db.query(models.Entry).filter(
+                models.Entry.customer_id == c.id
+            ).order_by(models.Entry.created_at.desc()).first()
+            
+            if use_en:
+                extra = f" Latest entry: {c.name} {'credit ' + str(last.amount) if last.type=='credit_given' else 'received ' + str(last.amount)}." if last and last.parse_status != "failed" else ""
+                return f"{c.name}'s balance is Rs {c.balance:,.0f}.{extra}"
             else:
-                parts.append(f"{_entry_phrase(ename, e.amount, e.type)} — {_when(e.created_at)}")
-        recent_s = " Recent: " + ". ".join(parts) + "."
+                extra = f" हाल ही में: {_entry_phrase(c.name, last.amount, last.type, use_en)}।" if last and last.parse_status != "failed" else ""
+                return f"{c.name} का कुल बैलेंस {c.balance:,.0f} रुपये है।{extra}"
 
-    return (f"Yeh raha tumhare shop ka pura data ({_today()}): total {count} customer, "
-            f"sabka total balance Rs {total_balance:,.0f}. Total udhaar diya Rs {total_given:,.0f}, "
-            f"total payment mila Rs {total_received:,.0f}. Total {entry_count} entries.{detail}{recent_s}")
+    # 2. Total Credit / Udhaar Given queries
+    if any(kw in t for kw in ['udhaar', 'credit', 'diya', 'baanta', 'loan', 'given', 'उधार', 'दिया', 'क्रेडिट', 'लोन']):
+        total_given = db.query(func.sum(models.Entry.amount)).filter(
+            models.Entry.shop_id == shop.id, models.Entry.type == 'credit_given'
+        ).scalar() or 0
+        if use_en:
+            return f"Total credit given across your shop is Rs {total_given:,.0f}."
+        return f"आपकी दुकान में कुल उधार दिया गया {total_given:,.0f} रुपये है।"
+
+    # 3. Total Payment Received / Vasooli queries
+    if any(kw in t for kw in ['vasool', 'received', 'wapas', 'mila', 'jama', 'payment', 'paid', 'वसूल', 'प्राप्त', 'जमा', 'वापस', 'मिला', 'भुगतान', 'पेमेंट']):
+        total_received = db.query(func.sum(models.Entry.amount)).filter(
+            models.Entry.shop_id == shop.id, models.Entry.type == 'payment_received'
+        ).scalar() or 0
+        if use_en:
+            return f"Total payment received across your shop is Rs {total_received:,.0f}."
+        return f"आपकी दुकान में कुल प्राप्त भुगतान {total_received:,.0f} रुपये है।"
+
+    # 4. Total / Balance / Outstanding queries
+    if any(kw in t for kw in ['total', 'balance', 'baki', 'baccha', 'remain', 'due', 'hisab', 'hisaab', 'sum', 'टोटल', 'बैलेंस', 'बाकी', 'बचा', 'हिसाब', 'बकाया', 'कुल']):
+        return _handle_total(shop, db, use_en)
+
+    # 5. Customer Count queries
+    if any(kw in t for kw in ['kitne user', 'kitne customer', 'customer kitne', 'user kitne', 'customers', 'how many', 'total customer', 'count', 'grahak', 'ग्राहक', 'कस्टमर', 'यूजर']):
+        return _handle_customer_count(shop, db, use_en)
+
+    # 6. Customer List / Details queries
+    if any(kw in t for kw in ['detail', 'info', 'list', 'naam', 'names', 'who are', 'विवरण', 'लिस्ट', 'नाम', 'जानकारी', 'डिटेल', 'सूची']):
+        return _handle_customer_list(shop, db, use_en)
+
+    # 7. Revenue / Sales queries
+    if any(kw in t for kw in ['sales', 'revenue', 'income', 'gross', 'kamaai', 'kamai', 'कमाई', 'सेल', 'आय']):
+        return _handle_revenue(shop, db, use_en)
+
+    # 8. Entry / History queries
+    if any(kw in t for kw in ['entry', 'entries', 'transactions', 'records', 'activity', 'history', 'aaj', 'एंट्री', 'लेनदेन', 'आज', 'इतिहास']):
+        return _handle_entry_detail(shop, db, use_en)
+
+    # 9. Greetings
+    if any(kw in t for kw in ['hello', 'hi', 'namaste', 'hii', 'salam', 'good morning', 'good evening', 'नमस्ते', 'हेलो', 'प्रणाम']):
+        shop_name = shop.shop_name or ('Dukaandaar' if not use_en else 'Shopkeeper')
+        if use_en:
+            return f"Hello {shop_name}! I am BolKhata. Ask me about your total, balance, customer details, or recent entries."
+        return f"नमस्ते {shop_name}! मैं BolKhata हूँ। आप मुझसे अपनी दुकान का कुल हिसाब, बैलेंस, ग्राहक सूची या हाल की एंट्रीज़ पूछ सकते हैं।"
+
+    # 10. Help
+    if any(kw in t for kw in ['help', 'kaunse sawal', 'pooch sakte ho', 'what can i ask', 'मदद', 'सहायता', 'कैसे पूछें']):
+        if use_en:
+            return "You can ask: 'What is my total?', 'How many customers?', 'Customer details', 'What is remaining balance?', or ask about any customer name."
+        return "आप पूछ सकते हैं: 'कुल कितना हुआ', 'कितने ग्राहक हैं', 'ग्राहक सूची', 'बैलेंस कितना बचा है', या किसी भी ग्राहक का नाम लेकर बैलेंस पूछें।"
+
+    # 11. General Shop / System Query Fallback
+    if any(kw in t for kw in ['shop', 'dukan', 'dukandaar', 'system', 'report', 'summary', 'sab', 'kya', 'kitna', 'batao', 'dene', 'lene', 'दुकान', 'सिस्टम', 'रिपोर्ट', 'सब', 'क्या', 'कितना', 'बताओ', 'डाटा', 'डेटा', 'हाल', 'हिसाब']):
+        return _handle_total(shop, db, use_en)
+
+    # 12. Unknown / Out-of-system fallback
+    if use_en:
+        return "Sorry, I don't have this information."
+    return "माफ़ कीजिए, यह जानकारी मेरे पास उपलब्ध नहीं है।"
 
 
-def _handle_total(shop: models.Shop, db: Session) -> str:
+def _entry_phrase(cust_name, amount, etype, use_en=False):
+    if use_en:
+        if etype == "credit_given":
+            return f"credited Rs {amount:,.0f} to {cust_name}"
+        return f"received Rs {amount:,.0f} from {cust_name}"
+    else:
+        if etype == "credit_given":
+            return f"{cust_name} को {amount:,.0f} रुपये उधार दिया"
+        return f"{cust_name} से {amount:,.0f} रुपये प्राप्त हुए"
+
+
+def _handle_total(shop: models.Shop, db: Session, use_en: bool) -> str:
     total_given, total_received, total_balance, _, _ = _shop_totals(shop, db)
-    return f"Aaj {_today()}: total udhaar diya Rs {total_given:,.0f}. Total payment mila Rs {total_received:,.0f}. Sabka total balance (jama hua) Rs {total_balance:,.0f}." 
+    if use_en:
+        return f"Today ({_today()}): Total credit given is Rs {total_given:,.0f}. Total payment received is Rs {total_received:,.0f}. Total customer balance is Rs {total_balance:,.0f}."
+    return f"आज {_today()}: कुल उधार दिया {total_given:,.0f} रुपये। कुल भुगतान प्राप्त हुआ {total_received:,.0f} रुपये। कुल बकाया बैलेंस {total_balance:,.0f} रुपये है।"
 
 
-def _handle_customer_count(shop: models.Shop, db: Session) -> str:
+def _handle_customer_count(shop: models.Shop, db: Session, use_en: bool) -> str:
     count = db.query(models.Customer).filter(models.Customer.shop_id == shop.id).count()
-    return f"Tumhare shop mein total {count} customer hain."
+    if use_en:
+        return f"You have a total of {count} customers in your shop."
+    return f"आपकी दुकान में कुल {count} ग्राहक हैं।"
 
 
-def _handle_customer_list(shop: models.Shop, db: Session) -> str:
+def _handle_customer_list(shop: models.Shop, db: Session, use_en: bool) -> str:
     customers = db.query(models.Customer).filter(models.Customer.shop_id == shop.id).all()
     if not customers:
-        return "Tumhare shop mein koi customer nahi hai abhi."
-    result = f"Tumhare {len(customers)} customer hain: "
-    names = [f"{c.name} — balance Rs {c.balance:,.0f}" for c in customers]
-    result += ". ".join(names) + "."
-    return result
+        if use_en:
+            return "There are currently no customers registered in your shop."
+        return "आपकी दुकान में अभी कोई ग्राहक नहीं है।"
+    if use_en:
+        names = [f"{c.name} balance Rs {c.balance:,.0f}" for c in customers]
+        return f"You have {len(customers)} customers: " + ", ".join(names) + "."
+    else:
+        names = [f"{c.name} का बैलेंस {c.balance:,.0f} रुपये" for c in customers]
+        return f"आपकी दुकान में {len(customers)} ग्राहक हैं: " + "। ".join(names) + "।"
 
 
-def _handle_specific_customer(text: str, shop: models.Shop, db: Session) -> str:
-    parts = text.split()
-    for i, word in enumerate(parts):
-        if word in ['ka', 'ke', 'ki', 'ka']:
-            name = ' '.join(parts[:i]) if i > 0 else ''
-            if name:
-                customer = db.query(models.Customer).filter(
-                    models.Customer.shop_id == shop.id,
-                    func.lower(models.Customer.name).like(f'%{name.lower()}%')
-                ).first()
-                if customer:
-                    last = db.query(models.Entry).filter(
-                        models.Entry.customer_id == customer.id
-                    ).order_by(models.Entry.created_at.desc()).first()
-                    extra = ""
-                    if last and last.parse_status != "failed":
-                        extra = f" Latest: {_entry_phrase(customer.name, last.amount, last.type)} — {_when(last.created_at)}."
-                    return f"{customer.name} ka balance Rs {customer.balance:,.0f} hai.{extra}"
-            break
-    return "Customer nahi mila. Naam seedhi bolo jaise 'Ramesh ka balance'."
-
-
-def _handle_balance(shop: models.Shop, db: Session) -> str:
+def _handle_balance(shop: models.Shop, db: Session, use_en: bool) -> str:
     total = db.query(func.sum(models.Customer.balance)).filter(
         models.Customer.shop_id == shop.id
     ).scalar() or 0
-    return f"Aaj {_today()} ko tumhare sabka total balance Rs {total:,.0f} rahega." 
+    if use_en:
+        return f"Total remaining balance across all customers is Rs {total:,.0f}."
+    return f"आपकी दुकान का कुल बकाया बैलेंस {total:,.0f} रुपये है।"
 
 
-def _handle_revenue(shop: models.Shop, db: Session) -> str:
+def _handle_revenue(shop: models.Shop, db: Session, use_en: bool) -> str:
     total_given, total_received, _, entry_count, _ = _shop_totals(shop, db)
-    return f"Aaj {_today()} tak: udhaar diya Rs {total_given:,.0f}. Wapas/payment mila Rs {total_received:,.0f}. Total {entry_count} entries."
+    if use_en:
+        return f"As of today ({_today()}): Total credit given Rs {total_given:,.0f}, total payment received Rs {total_received:,.0f} across {entry_count} entries."
+    return f"आज {_today()} तक: उधार दिया {total_given:,.0f} रुपये, वापस प्राप्त हुआ {total_received:,.0f} रुपये। कुल {entry_count} एंट्रियां हैं।"
 
 
-def _handle_entry_detail(shop: models.Shop, db: Session) -> str:
+def _handle_entry_detail(shop: models.Shop, db: Session, use_en: bool) -> str:
     entry_count = db.query(models.Entry).filter(models.Entry.shop_id == shop.id).count()
     entries = db.query(models.Entry).filter(
         models.Entry.shop_id == shop.id
-    ).order_by(models.Entry.created_at.desc()).limit(6).all()
+    ).order_by(models.Entry.created_at.desc()).limit(5).all()
     if entry_count == 0:
-        return "Abhi tak koi entry nahi hai."
-    lines = [f"Total {entry_count} entries, recent hisaab:"]
-    for e in entries:
-        ename = e.customer.name if e.customer else "kisi ka"
-        if e.parse_status == "failed":
-            lines.append(f"'{e.raw_voice_text}' nahi samjha ({_when(e.created_at)})")
-        else:
-            lines.append(f"{_entry_phrase(ename, e.amount, e.type)} ({_when(e.created_at)})")
-    return ". ".join(lines) + "."
+        if use_en:
+            return "There are no transaction entries yet."
+        return "अभी तक कोई एंट्री नहीं है।"
+    
+    if use_en:
+        lines = [f"Total {entry_count} entries. Recent entries:"]
+        for e in entries:
+            ename = e.customer.name if e.customer else "Unknown"
+            lines.append(f"{_entry_phrase(ename, e.amount, e.type, use_en)} ({_when(e.created_at)})")
+        return ". ".join(lines) + "."
+    else:
+        lines = [f"कुल {entry_count} एंट्रियां हैं। हाल ही का हिसाब:"]
+        for e in entries:
+            ename = e.customer.name if e.customer else "अज्ञात"
+            lines.append(f"{_entry_phrase(ename, e.amount, e.type, use_en)} ({_when(e.created_at)})")
+        return "। ".join(lines) + "।"

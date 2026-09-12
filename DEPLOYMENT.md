@@ -66,8 +66,8 @@
 
 | Feature | Offline | Online |
 |---------|---------|--------|
-| **Voice Entry** (STT) | ✅ Local Whisper Tiny | ✅ Browser Web Speech + Server Whisper |
-| **Voice Command** (TTS) | ✅ XTTS v2 cloned voice | ✅ Backend Query + XTTS v2 |
+| **Voice Entry** (STT) | ✅ Local Web Speech / Whisper | ✅ Web Speech API / OpenAI Whisper |
+| **Voice Command** (TTS) | ✅ Native `hi-IN` & `en-IN` Synthesis | ✅ Native `hi-IN` & `en-IN` Synthesis |
 | **Voice Query** | ✅ Local data processing | ✅ Backend `/api/voice/query` |
 | **Customer CRUD** | ✅ IndexedDB + Queue | ✅ Backend API |
 | **Entry Creation** | ✅ IndexedDB + Queue | ✅ Backend API |
@@ -76,7 +76,6 @@
 | **PWA Install** | ✅ Works offline | ✅ Works online |
 | **Service Worker** | ✅ Cached pages | ✅ NetworkFirst caching |
 | **Auto-Sync** | ✅ Queued in IndexedDB | ✅ Auto-sync on connect |
-| **TTS Responses** | ✅ XTTS v2 cloned voice (offline) | ✅ XTTS v2 cloned voice |
 
 **Data Isolation**: All queries are filtered by `shop_id` from JWT. No data leaking between shops.
 

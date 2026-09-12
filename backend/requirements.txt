@@ -3,6 +3,8 @@ uvicorn[standard]==0.30.1
 sqlalchemy==2.0.31
 pydantic==2.8.2
 python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.3
 python-dotenv==1.0.1
 python-multipart==0.0.9
 requests==2.32.3
@@ -11,10 +13,7 @@ openai==1.40.0
 anthropic==0.34.0
 httpx==0.27.0
 aiofiles==23.2.1
-# For CSV export
 csv23==0.8.7
-# For background task scheduling
 apscheduler==3.10.4
-# For additional utilities
 bloomfilter2==1.0.0
 pydantic-settings==2.0.3
